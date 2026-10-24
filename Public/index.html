@@ -637,41 +637,55 @@
     }
 
     // AUTH STATE LISTENER
+    // Keep authentication errors visible instead of leaving the app silently stuck at the login screen.
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUserEmail = user.email;
-            // Fetch user record to determine familyId and profile
-            const userDocSnap = await getDoc(doc(db, "users", user.uid));
-            if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                activeFamilyId = userData.familyId;
-                currentUserProfileId = userData.profileId || null;
-                isAdminLoggedIn = userData.isAdmin === true;
-
-                if (!currentUserProfileId && !isAdminLoggedIn) {
-                    // Check pending status
-                    document.getElementById('authModal').classList.remove('hidden');
-                    showToast("Your account is pending admin approval and profile linking.");
-                    return;
-                }
-
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('headerFamilyLabel').textContent = `Family: ${activeFamilyId}`;
-                document.getElementById('familyIdDisplay').textContent = `Family ID: ${activeFamilyId}`;
-                document.getElementById('adminGearBtn').classList.toggle('hidden', !isAdminLoggedIn);
-
-                setupFamilyListeners(activeFamilyId);
-            } else {
-                auth.signOut();
-                document.getElementById('authModal').classList.remove('hidden');
-            }
-        } else {
+        if (!user) {
             cleanupListeners();
             activeFamilyId = null;
+            activeMemberId = null;
             currentUserProfileId = null;
             isAdminLoggedIn = false;
+            currentUserEmail = null;
             document.getElementById('authModal').classList.remove('hidden');
             document.getElementById('adminGearBtn').classList.add('hidden');
+            return;
+        }
+
+        currentUserEmail = user.email;
+        try {
+            const userDocSnap = await getDoc(doc(db, "users", user.uid));
+            if (!userDocSnap.exists()) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Signed in, but no Tubby account record was found. Your signup may have been interrupted. Contact the family admin.");
+                return;
+            }
+
+            const userData = userDocSnap.data();
+            if (!userData.familyId) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Your Tubby account is missing its family ID. Ask the family admin to check your account.");
+                return;
+            }
+
+            activeFamilyId = userData.familyId;
+            currentUserProfileId = userData.profileId || null;
+            isAdminLoggedIn = userData.isAdmin === true;
+
+            if (!currentUserProfileId && !isAdminLoggedIn) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Your account is pending admin approval and profile linking.");
+                return;
+            }
+
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('headerFamilyLabel').textContent = `Family: ${activeFamilyId}`;
+            document.getElementById('familyIdDisplay').textContent = `Family ID: ${activeFamilyId}`;
+            document.getElementById('adminGearBtn').classList.toggle('hidden', !isAdminLoggedIn);
+            setupFamilyListeners(activeFamilyId);
+        } catch (err) {
+            console.error("Tubby account loading failed:", err);
+            document.getElementById('authModal').classList.remove('hidden');
+            showToast("Signed in, but Tubby couldn't load your account: " + (err?.message || "Firestore error") + ". Check Firestore rules.");
         }
     });
 
