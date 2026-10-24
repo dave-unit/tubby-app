@@ -765,58 +765,87 @@
         const email = document.getElementById('signupEmail').value.trim();
         const pass = document.getElementById('signupPassword').value;
 
-        try {
-            const cred = await createUserWithEmailAndPassword(auth, email, pass);
-            // Check if family already has admins
-            const famDocRef = doc(db, "families", familyId);
-            const famSnap = await getDoc(famDocRef);
-            const isAdmin = !famSnap.exists(); // First user becomes admin
+        if (!familyId || !name || !email || !pass) {
+            showToast("Please complete all signup fields.");
+            return;
+        }
 
-            // Store user record in global /users/{uid}
-            await setDoc(doc(db, "users", cred.user.uid), {
-                email,
-                familyId,
-                name,
-                isAdmin,
-                profileId: null,
-                createdAt: Date.now()
+        let cred;
+        try {
+            try {
+                cred = await createUserWithEmailAndPassword(auth, email, pass);
+            } catch (createErr) {
+                // Recover accounts where Firebase Auth succeeded previously but Firestore setup failed.
+                if (createErr.code !== "auth/email-already-in-use") throw createErr;
+                cred = await signInWithEmailAndPassword(auth, email, pass);
+                const existingUser = await getDoc(doc(db, "users", cred.user.uid));
+                if (existingUser.exists()) {
+                    showToast("This account is already set up. Please use Sign In.");
+                    return;
+                }
+            }
+
+            const uid = cred.user.uid;
+            const userRef = doc(db, "users", uid);
+            const famRef = doc(db, "families", familyId);
+            const profileRef = doc(collection(db, "families", familyId, "profiles"));
+            const pendingRef = doc(db, "families", familyId, "pendingUsers", uid);
+            const now = Date.now();
+
+            await runTransaction(db, async (transaction) => {
+                const famSnap = await transaction.get(famRef);
+                const userSnap = await transaction.get(userRef);
+
+                if (userSnap.exists()) {
+                    throw new Error("A Tubby account record already exists for this login. Please use Sign In.");
+                }
+
+                const isAdmin = !famSnap.exists();
+                if (isAdmin) {
+                    transaction.set(famRef, {
+                        familyId,
+                        createdBy: uid,
+                        createdAt: now
+                    });
+                    transaction.set(userRef, {
+                        email, familyId, name, isAdmin: true,
+                        profileId: profileRef.id, createdAt: now
+                    });
+                    transaction.set(profileRef, {
+                        name,
+                        emoji: '🥑',
+                        dob: '1990-01-01',
+                        goal: 'Healthy Eating',
+                        role: 'Adult',
+                        calTarget: 2000,
+                        proteinTarget: 120,
+                        carbsTarget: 200,
+                        fatTarget: 65,
+                        trackMacros: true,
+                        trackPortions: false,
+                        trackReactions: false,
+                        showToKids: true,
+                        showToAdults: true,
+                        avatar: null,
+                        updatedAt: now
+                    });
+                } else {
+                    transaction.set(userRef, {
+                        email, familyId, name, isAdmin: false,
+                        profileId: null, createdAt: now
+                    });
+                    transaction.set(pendingRef, {
+                        uid, email, name, createdAt: now
+                    });
+                }
             });
 
-            if (isAdmin) {
-                // Automatically create first adult profile and link
-                const profileRef = doc(collection(db, "families", familyId, "profiles"));
-                await setDoc(profileRef, {
-                    name,
-                    emoji: '🥑',
-                    dob: '1990-01-01',
-                    goal: 'Healthy Eating',
-                    role: 'Adult',
-                    calTarget: 2000,
-                    proteinTarget: 120,
-                    carbsTarget: 200,
-                    fatTarget: 65,
-                    trackMacros: true,
-                    trackPortions: false,
-                    trackReactions: false,
-                    showToKids: true,
-                    showToAdults: true,
-                    avatar: null,
-                    updatedAt: Date.now()
-                });
-                await updateDoc(doc(db, "users", cred.user.uid), { profileId: profileRef.id });
-                showToast(`Admin account created for ${familyId}!`);
-            } else {
-                // Add to family's pendingUsers collection
-                await setDoc(doc(db, "families", familyId, "pendingUsers", cred.user.uid), {
-                    uid: cred.user.uid,
-                    email,
-                    name,
-                    createdAt: Date.now()
-                });
-                showToast("Account created! Waiting for Family Admin approval.");
-            }
+            showToast("Account setup complete. " + (await getDoc(userRef)).data().isAdmin
+                ? `Admin account created for ${familyId}!`
+                : "Account created! Waiting for Family Admin approval.");
         } catch (err) {
-            showToast("❌ " + err.message);
+            console.error("Tubby signup/setup failed:", err);
+            showToast("❌ " + (err?.message || "Signup failed. Please try again."));
         }
     }
 
