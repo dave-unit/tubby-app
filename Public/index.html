@@ -840,7 +840,8 @@
                 }
             });
 
-            showToast("Account setup complete. " + (await getDoc(userRef)).data().isAdmin
+            const completedUser = (await getDoc(userRef)).data();
+            showToast(completedUser?.isAdmin
                 ? `Admin account created for ${familyId}!`
                 : "Account created! Waiting for Family Admin approval.");
         } catch (err) {
