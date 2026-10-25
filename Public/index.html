@@ -1,3 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tubby - Family Diet Tracker</title>
+    <link rel="icon" type="image/svg+xml" href="/tubby-avocado.svg">
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#22c55e">
+    <link rel="apple-touch-icon" href="/tubby-avocado.svg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { brand: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' } },
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* Opaque cap above sticky modal headers hides content scrolling underneath the top padding. */
+.modal-sticky-header { position: sticky; }
+.modal-sticky-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 1.5rem;
+    background: #fff;
+    pointer-events: none;
+}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased pb-24 min-h-screen">
+
+<!-- TOP NAV HEADER -->
+<header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-xs">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="openManager('home')" aria-label="Go to home" title="Home" class="w-9 h-9 rounded-2xl bg-white flex items-center justify-center shadow-sm active:scale-95 overflow-hidden"><img src="/tubby-avocado.svg" alt="" class="w-full h-full object-contain scale-110"></button>
+            <div>
+                <h1 class="font-extrabold text-base leading-none text-slate-900">Tubby</h1>
+                <p class="text-[10px] text-slate-400 font-semibold mt-0.5" id="headerFamilyLabel">Family: Loading...</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openManager('diet'); switchTab('family')" id="tabFamilyTop" class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-2 text-slate-700 text-xs font-extrabold" title="Family profiles"><i class="fa-solid fa-users"></i><span>Family</span></button>
+            <button onclick="openContextGuide()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold hover:bg-slate-200" title="User Guide">
+                <i class="fa-solid fa-circle-question"></i>
+            </button>
+            <button id="adminGearBtn" onclick="openAdminModal()" class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold hover:bg-purple-200 hidden" title="Admin Settings">
+                <i class="fa-solid fa-shield-halved"></i>
+            </button>
+            <button onclick="logout()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold hover:bg-slate-200" title="Log Out">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- FAMILY MEMBER SELECTOR BAR -->
+<div class="bg-white border-b border-slate-200 px-4 py-2 sticky top-[57px] z-20 shadow-2xs hidden">
+    <div class="max-w-md mx-auto flex items-center gap-2 overflow-x-auto hide-scrollbar" id="familySelectorBar"></div>
+</div>
+
+<!-- MAIN APP CONTENT CONTAINERS -->
+<main class="max-w-md mx-auto px-4 pt-4">
+
+    <section id="viewHome" class="space-y-4">
+      <div class="pt-2 pb-1"><h2 class="text-xl font-black text-slate-900">What would you like to manage?</h2><p class="text-xs text-slate-500 mt-1">Choose a family tool.</p></div>
+      <button onclick="openManager('diet')" class="w-full bg-white rounded-3xl p-5 shadow-xs border border-slate-200 text-left flex items-center gap-4"><div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-apple-whole"></i></div><div class="flex-1"><h3 class="font-black text-base text-slate-900">Family Diet Manager</h3><p class="text-xs text-slate-500 mt-1">Meals, nutrition, fruit, veg and weight</p></div><i class="fa-solid fa-chevron-right text-slate-400"></i></button>
+      <button onclick="openManager('food')" class="w-full bg-white rounded-3xl p-5 shadow-xs border border-slate-200 text-left flex items-center gap-4"><div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl"><i class="fa-solid fa-box-open"></i></div><div class="flex-1"><h3 class="font-black text-base text-slate-900">Family Food Manager</h3><p class="text-xs text-slate-500 mt-1">Stock, meal ideas and shopping</p></div><i class="fa-solid fa-chevron-right text-slate-400"></i></button>
+    </section>
+    <!-- VIEW 1: TODAY DASHBOARD -->
+    <section id="viewToday" class="space-y-4 hidden">
+        <div id="activeProfileCard" class="bg-slate-900 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+            <div class="absolute -right-4 -bottom-4 opacity-10 text-8xl font-black text-white pointer-events-none">🥑</div>
+            <div class="flex items-center gap-3.5 relative z-10">
+                <div id="dashAvatarBox" class="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center text-2xl shadow-inner overflow-hidden flex-shrink-0"></div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h2 id="dashMemberName" class="text-lg font-black tracking-tight truncate">Select Profile</h2>
+                        <span id="dashRoleBadge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">Adult</span>
+                    </div>
+                    <p id="dashSubtext" class="text-xs text-slate-400 mt-0.5">Goal: Healthy Eating</p>
+                </div>
+                <button onclick="openActiveProfileEditModal()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold text-white transition-all backdrop-blur-sm border border-white/10">Edit</button>
+            </div>
+
+            <div id="dashMacroSection" class="mt-5 space-y-3 pt-4 border-t border-white/10 relative z-10">
+                <div>
+                    <div class="flex justify-between text-xs font-bold mb-1">
+                        <span class="text-slate-300"><i class="fa-solid fa-fire text-orange-400 mr-1"></i> Calories</span>
+                        <span id="dashCalText" class="text-white">0 / 2000 kcal</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div id="dashCalBar" class="h-full bg-gradient-to-r from-orange-400 to-amber-300 w-0 transition-all duration-500"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-1 text-center">
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5">
+                        <div class="text-[10px] text-slate-400 font-bold">Protein</div>
+                        <div id="dashProtText" class="text-xs font-black text-emerald-400 mt-0.5">0 / 120g</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5">
+                        <div class="text-[10px] text-slate-400 font-bold">Carbs</div>
+                        <div id="dashCarbText" class="text-xs font-black text-sky-400 mt-0.5">0 / 200g</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5">
+                        <div class="text-[10px] text-slate-400 font-bold">Fat</div>
+                        <div id="dashFatText" class="text-xs font-black text-purple-400 mt-0.5">0 / 65g</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-2 text-center">
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Fibre</div><div id="dashFibreText" class="text-xs font-black text-amber-300 mt-0.5">0g today</div></div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Salt</div><div id="dashSaltText" class="text-xs font-black text-rose-300 mt-0.5">0g today</div></div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Fruit/Veg</div><div id="dashFruitVegWeekText" class="text-xs font-black text-emerald-300 mt-0.5">0 / 35 this week</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOG ENTRY ACTION -->
+        <button onclick="openNewEntryModal()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-md text-left flex items-center justify-between gap-3 active:scale-[0.99] transition-transform">
+            <div>
+                <h3 class="font-extrabold text-sm"><i class="fa-solid fa-pen-to-square mr-1.5"></i> Log Food</h3>
+                <p class="text-xs text-emerald-100 mt-1">Add notes, take a photo, upload an image, or combine them</p>
+            </div>
+            <i class="fa-solid fa-chevron-right text-white/80"></i>
+        </button>
+
+        <div class="flex items-center justify-between pt-2">
+            <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-utensils text-brand-600"></i> Today's Food Log</h3>
+            <span id="logCountBadge" class="text-xs font-bold text-slate-400">0 Entries</span>
+        </div>
+        <div id="todayMealList" class="space-y-3"></div>
+    </section>
+
+    <section id="viewFood" class="space-y-4 hidden pb-4">
+      <div class="flex items-center gap-2"><h2 class="font-black text-base text-slate-900">Family Food Manager</h2></div>
+      
+      <div id="foodPageAdd" class="space-y-4"><div class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200 space-y-4">
+        <div class="flex items-center justify-between"><h3 class="font-black text-slate-900 text-sm">Add food items</h3><button onclick="addFoodItem()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-extrabold">+ Manual</button></div>
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2"><label for="foodTextToAI" class="block text-xs font-extrabold text-slate-800">Type a list for AI to organise</label><textarea id="foodTextToAI" rows="3" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-white" placeholder="e.g. 2 tins tomatoes, half a bag of rice, 1 litre milk"></textarea><button onclick="addFoodFromTextAI()" class="w-full rounded-xl bg-purple-600 text-white py-3 text-xs font-extrabold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Organise with AI</button></div>
+        <div class="grid grid-cols-2 gap-2"><button onclick="document.getElementById('foodScanInput').click()" class="rounded-xl bg-brand-600 text-white p-3 text-xs font-extrabold"><i class="fa-solid fa-camera mr-1"></i> Photo stock</button><button onclick="document.getElementById('receiptScanInput').click()" class="rounded-xl bg-indigo-600 text-white p-3 text-xs font-extrabold"><i class="fa-solid fa-receipt mr-1"></i> Scan receipt</button></div>
+        <input type="file" id="foodScanInput" accept="image/*" capture="environment" multiple class="hidden" onchange="scanFoodImages(this,'inventory')"><input type="file" id="receiptScanInput" accept="image/*" capture="environment" multiple class="hidden" onchange="scanFoodImages(this,'receipt')">
+        <div id="foodScanStatus" class="hidden rounded-xl p-3 text-xs border"></div><div id="foodScanReview" class="hidden border border-amber-200 bg-amber-50 rounded-2xl p-3 space-y-3"><div class="font-black text-sm">Review detected items</div><div id="foodScanReviewItems" class="space-y-2"></div><button onclick="saveScannedFoodItems()" class="w-full rounded-xl bg-emerald-600 text-white py-3 text-xs font-extrabold">Save to stock</button></div>
+      </div></div>
+      <div id="foodPageStock" class="space-y-4 hidden"><div class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200 space-y-3"><div class="flex items-center justify-between"><h3 class="font-black text-slate-900 text-sm">Current stock</h3><button onclick="addFoodItem()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-extrabold">+ Add</button></div><div id="foodManagerStatus" class="text-xs text-slate-500">Loading shared stock…</div><div class="flex gap-1.5 overflow-x-auto hide-scrollbar pb-1"><button onclick="setFoodFilter('all')" id="foodFilterAll" class="shrink-0 rounded-lg bg-slate-900 text-white px-3 py-2 text-[11px] font-bold">All</button><button onclick="setFoodFilter('Fridge')" id="foodFilterFridge" class="shrink-0 rounded-lg bg-slate-100 text-slate-600 px-3 py-2 text-[11px] font-bold">Fridge</button><button onclick="setFoodFilter('Freezer')" id="foodFilterFreezer" class="shrink-0 rounded-lg bg-slate-100 text-slate-600 px-3 py-2 text-[11px] font-bold">Freezer</button><button onclick="setFoodFilter('Pantry')" id="foodFilterPantry" class="shrink-0 rounded-lg bg-slate-100 text-slate-600 px-3 py-2 text-[11px] font-bold">Pantry</button><button onclick="setFoodFilter('needsReview')" id="foodFilterReview" class="shrink-0 rounded-lg bg-amber-100 text-amber-900 px-3 py-2 text-[11px] font-bold">Needs checking</button></div><div id="foodInventoryList" class="space-y-2"></div></div>
+      </div><div id="foodPageMeals" class="space-y-4 hidden"><div class="bg-white rounded-3xl p-4 border border-slate-200 space-y-3"><h3 class="font-black text-slate-900 text-sm">Meal suggestions</h3><button onclick="suggestMeals()" class="w-full rounded-xl bg-purple-600 text-white py-3 text-xs font-extrabold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Generate more meal ideas</button><label class="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs font-bold text-amber-900"><span>Prioritise food near its date</span><input id="prioritiseNearDate" type="checkbox" checked class="h-4 w-4 accent-amber-600"></label><div class="grid grid-cols-2 gap-2"><button onclick="setMealMode('stock')" id="mealModeStock" class="rounded-xl bg-slate-900 text-white p-2 text-[11px] font-bold">Use stock only</button><button onclick="setMealMode('budget')" id="mealModeBudget" class="rounded-xl bg-slate-100 text-slate-600 p-2 text-[11px] font-bold">Allow cheap extras</button></div><div id="mealSuggestions" class="space-y-3"></div></div></div>
+      <div id="foodPageShopping" class="space-y-4 hidden"><div class="bg-white rounded-3xl p-4 border border-slate-200 space-y-3"><h3 class="font-black text-slate-900 text-sm">Shared shopping list</h3><div class="flex gap-2"><input id="shoppingNewItem" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-xs" placeholder="e.g. bread, eggs, baked beans"></div><button onclick="organiseShoppingListAI()" class="w-full rounded-xl bg-purple-600 text-white py-3 text-xs font-extrabold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Add & organise with AI</button><div id="shoppingAiStatus" class="hidden text-[11px] text-slate-500"></div><div id="shoppingListItems" class="space-y-3"></div><button onclick="finishShoppingTrip()" class="w-full rounded-xl bg-emerald-600 text-white py-3 text-xs font-extrabold">Finish shop & archive ticked items</button></div></div>
+    </section>
+
+    <nav id="foodBottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-2 py-1"><div class="max-w-md mx-auto grid grid-cols-5 gap-1 text-center"><button onclick="switchFoodPage('add')" id="foodPageAddBtn" class="rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-circle-plus text-base"></i>Add</button><button onclick="switchFoodPage('stock')" id="foodPageStockBtn" class="rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-boxes-stacked text-base"></i>Stock</button><button onclick="switchFoodPage('meals')" id="foodPageMealsBtn" class="rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-utensils text-base"></i>Meals</button><button onclick="switchFoodPage('shopping')" id="foodPageShoppingBtn" class="rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-cart-shopping text-base"></i>Shopping</button><button onclick="openManager('diet')" id="foodToDietBtn" class="rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1 text-purple-700"><i class="fa-solid fa-apple-whole text-base"></i>Diet</button></div></nav>
+
+    <!-- VIEW 2: FRUIT & VEG TRACKER -->
+    <section id="viewFruitVeg" class="space-y-4 hidden">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-black text-slate-900 text-base flex items-center gap-2">🍏 Fruit & Veg Monitor</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Strict Monday – Sunday intake tracker</p>
+                </div>
+                <span id="weeklyDateRangeLabel" class="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">Mon - Sun</span>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-4 text-white space-y-2">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="text-xs font-semibold text-emerald-100">Total Servings This Week</div>
+                        <div id="weeklyFruitVegTotalNum" class="text-3xl font-black mt-0.5">0.0 Servings</div>
+                    </div>
+                    <div id="weeklyTargetStatusBadge" class="text-xs font-extrabold bg-white/20 px-3 py-1 rounded-xl backdrop-blur-xs">Target: 35 / week</div>
+                </div>
+                <div class="w-full h-2.5 bg-black/20 rounded-full overflow-hidden">
+                    <div id="weeklyFruitVegProgressBar" class="h-full bg-white w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Daily Breakdown</h3>
+                <div id="monSunGrid" class="grid grid-cols-7 gap-1.5 text-center"></div>
+            </div>
+            <div id="fruitVegAiRecommendation" class="p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-xs space-y-1">
+                <div class="font-extrabold text-amber-900 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb text-amber-600"></i> Produce Recommendation</div>
+                <p id="fruitVegAiRecText" class="text-amber-800 leading-relaxed"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 3: WEIGHT HISTORY -->
+    <section id="viewWeight" class="space-y-4 hidden">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-black text-slate-900 text-base">⚖️ Weight Progress</h2>
+                    <p class="text-xs text-slate-500">Track body weight logs over time</p>
+                </div>
+                <button onclick="openAddWeightModal()" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Log Weight</button>
+            </div>
+            <div id="weightLogHistoryList" class="space-y-2"></div>
+        </div>
+    </section>
+
+    <!-- VIEW 4: FAMILY & PROFILES -->
+    <section id="viewFamily" class="space-y-4 hidden">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="font-black text-slate-900 text-base">👨‍👩‍👧‍👦 Family Members</h2>
+                    <p class="text-xs text-slate-500" id="familyIdDisplay">Family ID: Loading...</p>
+                </div>
+                <button id="addPersonBtn" onclick="openAddFamilyProfileModal()" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Add Person</button>
+            </div>
+            <div id="profilesList" class="space-y-2.5"></div>
+        </div>
+    </section>
+</main>
+
+<!-- MOBILE BOTTOM NAVIGATION TAB BAR -->
+<nav id="dietBottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-2 py-1">
+    <div class="max-w-md mx-auto grid grid-cols-5 gap-1 text-center">
+        <button onclick="switchTab('today')" id="tabToday" class="py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]">
+            <i class="fa-solid fa-house text-base"></i> Today
+        </button>
+        <button onclick="switchTab('fruitveg')" id="tabFruitVeg" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
+            <i class="fa-solid fa-apple-whole text-base"></i> Fruit/Veg
+        </button>
+        <button onclick="triggerPhotoSnap()" class="py-1 text-white flex flex-col items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white text-lg shadow-lg -mt-5 border-4 border-slate-100 active:scale-95 transition-transform">
+                <i class="fa-solid fa-camera"></i>
+            </div>
+            <span class="text-[9px] font-extrabold text-slate-700 mt-0.5">Scan</span>
+        </button>
+        <button onclick="switchTab('weight')" id="tabWeight" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
+            <i class="fa-solid fa-weight-scale text-base"></i> Weight
+        </button>
+        <button onclick="switchTab('food')" id="tabFood" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
+            <i class="fa-solid fa-box-open text-base"></i> Food
+        </button>
+    </div>
+</nav>
+
+<!-- FILE INPUTS (Camera & Gallery Upload) -->
+<input type="file" id="cameraFileInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageCaptured(this)">
+<input type="file" id="galleryFileInput" accept="image/*" class="hidden" onchange="handleImageCaptured(this)">
+
+<!-- MODAL 1: AUTHENTICATION -->
+<div id="authModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5 border border-slate-100">
+        <div class="text-center space-y-1">
+            <div class="w-14 h-14 mx-auto"><img src="/tubby-avocado.svg" alt="Tubby avocado" class="w-full h-full object-contain"></div>
+            <h2 class="text-xl font-black text-slate-900">Tubby</h2>
+            <p class="text-xs text-slate-500">The Family Friendly Diet App</p>
+        </div>
+        <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-2xl text-[11px] font-extrabold">
+            <button type="button" id="authTabLoginBtn" onclick="switchAuthTab('login')" class="py-2 rounded-xl bg-white text-slate-800 shadow-xs cursor-pointer">Login</button>
+            <button type="button" id="authTabSignupBtn" onclick="switchAuthTab('signup')" class="py-2 rounded-xl text-slate-500 cursor-pointer">Sign Up</button>
+        </div>
+        
+        <form id="userLoginForm" onsubmit="handleUserLoginSubmit(event)" class="space-y-3">
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Email Address</label>
+                <input type="email" id="loginEmail" required placeholder="family@example.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Password</label>
+                <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all">Sign In</button>
+        </form>
+
+        <form id="userSignupForm" onsubmit="handleUserSignupSubmit(event)" class="space-y-3 hidden">
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Family ID</label>
+                <input type="text" id="signupFamilyId" required placeholder="e.g. FLOREY_FAMILY" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Your Name</label>
+                <input type="text" id="signupUserName" required placeholder="e.g. Sarah" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Email Address</label>
+                <input type="email" id="signupEmail" required placeholder="family@example.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Create Password</label>
+                <input type="password" id="signupPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            </div>
+            <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all">Create Account (Pending Admin Approval)</button>
+        </form>
+
+        <div class="border-t border-slate-100 pt-3 space-y-2">
+            <p class="text-center text-[11px] text-slate-500">New to Tubby or need help setting up your family?</p>
+            <button type="button" onclick="openGuideModal()" class="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-book-open"></i> Open Tubby User Guide
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: LOG / EDIT FOOD ENTRY -->
+<div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar space-y-4">
+        <div class="modal-sticky-header sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
+            <h3 class="font-extrabold text-slate-900 text-base" id="entryModalTitle">Log Food Entry</h3>
+            <button onclick="closeEntryModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="aiStatusBox" class="hidden rounded-2xl p-3 text-xs border space-y-1">
+            <div class="font-extrabold flex items-center gap-2" id="aiStatusHeader"></div>
+            <div class="text-slate-600" id="aiStatusBody"></div>
+        </div>
+
+        <div id="nutritionBreakdown" class="hidden rounded-2xl border border-purple-200 bg-purple-50/60 p-3 space-y-2">
+            <button type="button" id="nutritionBreakdownToggle" onclick="toggleNutritionBreakdown()" aria-expanded="false" class="w-full flex items-center justify-between gap-2 text-left"><span><span class="block text-xs font-black text-purple-950">Adjust meal components</span><span class="block text-[10px] text-purple-800">Optional: edit portions or record what was actually eaten</span></span><span id="nutritionBreakdownChevron" class="text-purple-800 text-sm">＋</span></button>
+            <div id="nutritionBreakdownDetails" class="hidden space-y-2">
+                <div class="flex justify-end"><button type="button" onclick="addNutritionComponent()" class="rounded-lg bg-white border border-purple-200 px-2 py-1 text-[10px] font-bold text-purple-900">+ Add item</button></div>
+                <div id="nutritionBreakdownRows" class="space-y-2"></div>
+                <div class="flex justify-between border-t border-purple-200 pt-2 text-xs font-black text-purple-950"><span>Meal total (adjusted for eaten amounts)</span><span id="nutritionBreakdownTotal">0 kcal</span></div>
+            </div>
+        </div>
+        <div id="aiPreviewCard" class="hidden bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs text-emerald-900 font-medium">
+            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 mr-1"></i>
+            <span id="aiDetectedTitleText">AI Detected Food / Label</span>
+        </div>
+
+        <form id="entryForm" onsubmit="saveEntry(event)" class="space-y-3.5">
+            <input type="hidden" id="entryId">
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Meal Photo / Nutrition Label</label>
+                <div class="relative w-full h-40 bg-slate-100 rounded-2xl overflow-hidden border border-dashed border-slate-300 flex items-center justify-center">
+                    <img id="photoPreview" class="w-full h-full object-cover hidden">
+                    <div id="photoPlaceholder" class="text-center text-slate-400 space-y-1">
+                        <i class="fa-solid fa-camera text-2xl"></i>
+                        <div class="text-xs font-bold">No Photo Selected</div>
+                    </div>
+                    <div class="absolute bottom-2 right-2 flex gap-1.5">
+                        <button type="button" onclick="triggerPhotoSnap()" class="px-2.5 py-1.5 bg-slate-900/80 text-white rounded-xl text-xs font-bold backdrop-blur-xs">
+                            <i class="fa-solid fa-camera mr-1"></i> Snap
+                        </button>
+                        <button type="button" onclick="triggerFileUpload()" class="px-2.5 py-1.5 bg-emerald-700/80 text-white rounded-xl text-xs font-bold backdrop-blur-xs">
+                            <i class="fa-solid fa-upload mr-1"></i> Upload
+                        </button>
+                    </div>
+                    <button type="button" id="removePhotoBtn" onclick="removePhoto()" class="absolute top-2 right-2 w-7 h-7 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center hidden shadow-sm"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Person</label>
+                    <select id="entryMemberId" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"></select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Time</label>
+                    <input type="datetime-local" id="entryTime" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Category</label>
+                    <select id="entryCategory" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                        <option value="Breakfast">🥣 Breakfast</option>
+                        <option value="Lunch">🥪 Lunch</option>
+                        <option value="Dinner">🍽️ Dinner</option>
+                        <option value="Snack">🍎 Snack</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Meal Title / Product</label>
+                    <input type="text" id="entryTitle" required placeholder="Meal or Product Name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                </div>
+            </div>
+
+            <!-- MACRO SECTION -->
+            <div id="entryMacrosSection" class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                <div class="text-[11px] font-black uppercase text-slate-500 flex justify-between">
+                    <span>Nutrients</span><span class="text-brand-600 font-extrabold">Auto-filled by AI</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Calories</label>
+                        <input type="number" step="0.1" id="entryCalories" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Fruit/Veg Servings</label>
+                        <input type="number" step="0.1" id="entryFruitVeg" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Protein (g)</label>
+                        <input type="number" step="0.1" id="entryProtein" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Carbs (g)</label>
+                        <input type="number" step="0.1" id="entryCarbs" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Fat (g)</label>
+                        <input type="number" step="0.1" id="entryFat" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div><label class="text-[10px] font-bold text-slate-500">Fibre (g)</label><input type="number" step="0.1" id="entryFibre" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"></div>
+                    <div><label class="text-[10px] font-bold text-slate-500">Salt (g)</label><input type="number" step="0.01" id="entrySalt" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"></div>
+                </div>
+            </div>
+
+            <!-- PORTION TRACKER -->
+            <div id="entryKidPortionSection" class="p-3 bg-amber-50/70 border border-amber-200/70 rounded-2xl space-y-1.5">
+                <label class="block text-[11px] font-black uppercase text-amber-900">Amount Eaten</label>
+                <div class="grid grid-cols-4 gap-1 text-center text-xs font-extrabold">
+                    <label class="p-2 bg-white rounded-xl border border-amber-200 cursor-pointer has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                        <input type="radio" name="portion" value="All" checked class="hidden"> All
+                    </label>
+                    <label class="p-2 bg-white rounded-xl border border-amber-200 cursor-pointer has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                        <input type="radio" name="portion" value="Half" class="hidden"> Half
+                    </label>
+                    <label class="p-2 bg-white rounded-xl border border-amber-200 cursor-pointer has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                        <input type="radio" name="portion" value="Tasted" class="hidden"> Tasted
+                    </label>
+                    <label class="p-2 bg-white rounded-xl border border-amber-200 cursor-pointer has-[:checked]:bg-amber-500 has-[:checked]:text-white">
+                        <input type="radio" name="portion" value="Refused" class="hidden"> Refused
+                    </label>
+                </div>
+            </div>
+
+            <!-- REACTION SECTION -->
+            <div id="entryReactionSection" class="p-3 bg-rose-50/70 border border-rose-200/70 rounded-2xl space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-black uppercase text-rose-900">Symptom Observed?</label>
+                    <input type="checkbox" id="hasReaction" class="w-4 h-4 rounded text-rose-600">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Notes / Food Description</label>
+                <textarea id="entryNotes" rows="2" placeholder="Describe the food, ingredients, portion size, sauces, drinks, etc." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"></textarea>
+                <button type="button" onclick="estimateNutritionFromDetails()" class="w-full mt-2 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-extrabold text-xs rounded-xl">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Estimate Nutrition from Photo / Notes
+                </button>
+                <p class="text-[10px] text-slate-500 mt-1">Add a photo, describe what you ate, or use both. AI values are estimates—check them before saving.</p>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button type="button" id="deleteEntryBtn" onclick="deleteCurrentEntry()" class="px-3 py-3 bg-rose-100 text-rose-700 font-extrabold text-xs rounded-xl hidden"><i class="fa-solid fa-trash"></i></button>
+                <button type="submit" class="flex-1 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md">Save Entry</button>
+            </div>
+        <label class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900"><input id="deductStockAfterMeal" type="checkbox" class="mt-0.5"><span><b>Deduct from family stock</b><br>After saving, review matching stock items and confirm each new remaining amount.</span></label>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 3: PROFILE ADD / EDIT -->
+<div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar space-y-4">
+        <div class="modal-sticky-header sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
+            <h3 class="font-extrabold text-slate-900 text-base" id="profileModalTitle">Profile Setup</h3>
+            <button onclick="closeProfileEditModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="profileForm" onsubmit="saveProfileForm(event)" class="space-y-3.5">
+            <input type="hidden" id="profId">
+            <div class="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+                <div id="profAvatarPreview" class="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center text-2xl overflow-hidden font-black">🥑</div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-extrabold text-slate-800">Profile Picture</label>
+                    <input type="file" id="profAvatarInput" accept="image/*" class="text-[10px] text-slate-500" onchange="handleAvatarCaptured(this)">
+                    <input type="hidden" id="profAvatarBase64">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Name</label>
+                    <input type="text" id="profName" required placeholder="Name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Emoji</label>
+                    <input type="text" id="profEmoji" placeholder="🥑" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Date of Birth</label>
+                    <input type="date" id="profDob" required onchange="recalculateMacroTargets()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Goal</label>
+                    <select id="profGoal" onchange="recalculateMacroTargets()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                        <option value="Healthy Eating">Healthy Eating</option>
+                        <option value="Weight Loss">Weight Loss</option>
+                        <option value="Muscle Gain">Muscle Gain</option>
+                        <option value="Toddler Growth">Toddler Growth</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="profAgeCategoryBadge" class="text-xs font-bold text-slate-600 bg-slate-100 p-2 rounded-xl text-center">Auto-calculating age...</div>
+
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                <label class="block text-[11px] font-black uppercase text-slate-500">Daily Targets</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Calories</label>
+                        <input type="number" id="profCalTarget" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Protein (g)</label>
+                        <input type="number" id="profProteinTarget" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Carbs (g)</label>
+                        <input type="number" id="profCarbsTarget" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500">Fat (g)</label>
+                        <input type="number" id="profFatTarget" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <label class="block text-[11px] font-black uppercase text-slate-500">Feature Toggles</label>
+                <div class="space-y-1.5 text-xs font-bold text-slate-700">
+                    <label class="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                        <span>Track Calories & Macros</span>
+                        <input type="checkbox" id="togMacros" checked class="w-4 h-4 text-brand-600 rounded">
+                    </label>
+                    <label class="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                        <span>Track Kid Portion Eaten</span>
+                        <input type="checkbox" id="togPortions" class="w-4 h-4 text-brand-600 rounded">
+                    </label>
+                    <label class="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                        <span>Track Allergens / Symptoms</span>
+                        <input type="checkbox" id="togReactions" class="w-4 h-4 text-brand-600 rounded">
+                    </label>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <label class="block text-[11px] font-black uppercase text-slate-500">Privacy</label>
+                <div class="space-y-1.5 text-xs font-bold text-slate-700">
+                    <label class="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                        <span>Visible to Kids (< 18)</span>
+                        <input type="checkbox" id="togShowToKids" class="w-4 h-4 text-brand-600 rounded">
+                    </label>
+                    <label class="flex items-center justify-between p-2 bg-slate-50 rounded-xl">
+                        <span>Visible to Other Adults</span>
+                        <input type="checkbox" id="togShowToAdults" checked class="w-4 h-4 text-brand-600 rounded">
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button type="button" id="deleteProfBtn" onclick="deleteProfile()" class="px-3 py-3 bg-rose-100 text-rose-700 font-extrabold text-xs rounded-xl hidden"><i class="fa-solid fa-trash"></i></button>
+                <button type="submit" class="flex-1 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 4: ADMIN SETTINGS -->
+<div id="adminModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-stretch justify-center p-0 hidden overflow-y-auto">
+    <div class="bg-white rounded-none sm:rounded-3xl max-w-2xl w-full min-h-full max-h-screen p-4 sm:p-6 shadow-2xl space-y-4 overflow-y-auto overscroll-contain" style="-webkit-overflow-scrolling: touch;">
+        <div class="modal-sticky-header sticky top-0 z-10 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1">
+            <h3 class="font-extrabold text-purple-900 text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-purple-600"></i> Admin Console</h3>
+            <button onclick="closeAdminModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-2">
+            <label class="block text-[11px] font-black uppercase text-slate-500">Google Gemini API Key</label>
+            <input type="password" id="adminApiKeyInput" placeholder="Enter valid AI Studio API key" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+            <div class="flex gap-2 pt-1">
+                <button onclick="saveAdminApiKey()" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs rounded-xl shadow-xs">Save Key</button>
+                <button onclick="testAdminApiKey()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-purple-800 font-extrabold text-xs rounded-xl shadow-xs border border-purple-200">🧪 Test Key</button>
+            </div>
+            <div id="apiTestStatus" class="text-[11px] font-bold hidden p-2 rounded-xl mt-1"></div>
+        </div>
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+            <label class="block text-[11px] font-black uppercase text-slate-500">Pending Registrations</label>
+            <p class="text-[10px] text-slate-500">Approve new signups and assign them to family profiles.</p>
+            <div id="adminPendingList" class="space-y-2 max-h-40 overflow-y-auto"></div>
+
+            <label class="block text-[11px] font-black uppercase text-slate-500 pt-2">System Management</label>
+            <button onclick="openProfileEditModal(null, true)" class="w-full py-2 bg-slate-100 text-slate-700 font-extrabold text-xs rounded-xl text-left px-3">+ Add Family Profile</button>
+            <p class="text-[10px] text-slate-500">Profiles belong to this family. To add another login, have the person sign up with this Family ID, then approve them above.</p>
+            <label class="block text-[11px] font-black uppercase text-slate-500 pt-2">Manage Profiles</label>
+            <div id="adminProfilesList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 5: LOG WEIGHT ENTRY -->
+<div id="weightModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xs w-full p-5 shadow-2xl space-y-3">
+        <h3 class="font-extrabold text-slate-900 text-sm">Log Weight Entry</h3>
+        <div>
+            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Weight (kg)</label>
+            <input type="number" step="0.1" id="weightValueInput" placeholder="70.5" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+        </div>
+        <div class="flex gap-2 pt-2">
+            <button onclick="closeAddWeightModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 font-extrabold text-xs rounded-xl">Cancel</button>
+            <button onclick="saveWeightEntry()" class="flex-1 py-2 bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-xs">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 6: USER GUIDE -->
+<div id="guideModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div class="modal-sticky-header sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
+            <h3 id="guideTitle" class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i class="fa-solid fa-book-open text-brand-600"></i><span> Diet Manager Guide</span></h3>
+            <button onclick="closeGuideModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs" aria-label="Close user guide"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="dietGuideContent" class="space-y-4 text-xs text-slate-600 leading-relaxed">
+            <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 space-y-1">
+                <h4 class="font-extrabold text-emerald-900 text-sm">Welcome to Tubby</h4>
+                <p class="text-emerald-900">Tubby helps your family record meals, nutrition, fruit and vegetable intake, and weight progress. Follow the steps below to set up your family.</p>
+            </div>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">1. Set up a family for the first time</h4>
+                <ol class="list-decimal pl-5 space-y-1.5">
+                    <li>Choose <strong>Sign Up</strong> on the login screen.</li>
+                    <li>Enter a new Family ID. Use a simple name such as <strong>SMITH_FAMILY</strong>; remember it exactly, because other adults joining your family will need the same ID. IDs are converted to uppercase.</li>
+                    <li>Enter your name, email address and a password, then create the account.</li>
+                    <li>If this Family ID does not already exist, Tubby creates the family and makes this first login account the <strong>Family Admin</strong>. A starter profile is created for the admin too.</li>
+                    <li>After signing in, open <strong>Admin Settings</strong> to configure the AI food scanner (see step 4), then use the Family area to add profiles for the people you want to track.</li>
+                </ol>
+                <p class="text-slate-500">If the Family ID already exists, a new login account is created as a pending request. The Family Admin must approve it before it can be used to access the family.</p>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">2. Login accounts and family member profiles are different</h4>
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-sky-900">Login account</p>
+                    <p class="text-sky-900">A login account uses an email address and password. It lets someone sign in to Tubby. The first account for a new family becomes its admin; additional accounts using the same Family ID need admin approval.</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-amber-900">Family member profile</p>
+                    <p class="text-amber-900">A profile represents a person whose meals, nutrition or weight may be tracked. Add profiles from the Family area. A profile does <strong>not</strong> automatically create a login account, and children or other family members who do not need to sign in can have a profile only.</p>
+                </div>
+                <p>For example, one parent can have a login account and create profiles for both parents and their children. Create separate login accounts only for people who need to access Tubby themselves.</p>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">3. Add people and manage access</h4>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Open the <strong>Family</strong> tab and choose <strong>+ Add Person</strong> to create a member profile. Set the person's role, goals and tracking preferences.</li>
+                    <li>The Family Admin can manage family profiles and approve pending login requests in Admin Settings.</li>
+                    <li>To give another adult their own login, ask them to choose <strong>Sign Up</strong> and enter your existing Family ID. The admin must approve their request.</li>
+                    <li>Keep your Family ID available for trusted household members who need their own login. Do not share account passwords.</li>
+                </ul>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">4. Set up Google Gemini for AI food scanning</h4>
+                <p>The photo scanner uses Google's Gemini AI to estimate food or product details from a meal photo or nutrition label. A Google account and a Gemini API key are needed to use this feature. You can still enter food details manually without scanning.</p>
+                <ol class="list-decimal pl-5 space-y-1.5">
+                    <li>Sign in to a Google account and open <a class="font-extrabold text-emerald-700 underline" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio – API keys</a>.</li>
+                    <li>Follow Google's prompts to create or select a project and create an API key. Keep the key private; do not post it publicly or send it to anyone you do not trust.</li>
+                    <li>Sign in to Tubby as the Family Admin and open <strong>Admin Settings</strong> using the shield icon near the top of the app.</li>
+                    <li>Paste the key into the <strong>Google Gemini API Key</strong> field, choose <strong>Test Key</strong> to check it, then save it.</li>
+                    <li>Try taking a food photo or uploading a nutrition label. Review the suggested values before saving your food entry.</li>
+                </ol>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-amber-900">Important about the API key</p>
+                    <p class="text-amber-900">In the current version, Tubby saves the key in this browser on this device; it is not automatically shared across the family’s other devices. If another device needs AI scanning, configure a key there too. Google may apply usage limits or charges depending on its current terms and account setup, so check the details in Google AI Studio. Treat the key like a password.</p>
+                </div>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">5. Using Tubby</h4>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Use the profile selector near the top to choose the person you are logging for.</li>
+                    <li>On <strong>Today</strong>, scan a meal or enter the details manually and check the estimated nutrition values.</li>
+                    <li>Use <strong>Fruit/Veg</strong> to review weekly servings and <strong>Weight</strong> to record weight progress.</li>
+                    <li>Use the <strong>Family</strong> tab to switch between profiles and manage people you track.</li>
+                </ul>
+            </section>
+
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Having trouble?</h4>
+                <p>Check that your email and password are correct. If a new login was created for an existing family, ask the Family Admin to approve it. If AI scanning fails, check the API key in Admin Settings and test it again. You can still add entries manually if the scanner is unavailable.</p>
+            </section>
+        </div>
+        <div id="foodGuideContent" class="hidden space-y-3 text-xs text-slate-600 leading-relaxed"><div class="rounded-2xl bg-indigo-50 border border-indigo-200 p-3"><h4 class="font-extrabold text-indigo-900 text-sm">Family Food Manager</h4><p class="text-indigo-900 mt-1">Add food by typing a list, taking photos or scanning a receipt. Review AI results before saving.</p></div><section><h4 class="font-extrabold text-slate-900 text-sm">Add food</h4><p>Type items for AI to organise, photograph your stock, scan receipts or add items manually. Check names, quantities and dates before saving.</p></section><section><h4 class="font-extrabold text-slate-900 text-sm">Stock & meals</h4><p>Filter stock by storage area or items needing a check. Update quantities as food is used. Generate meal ideas using stock only or allowing inexpensive extras. Confirm stock changes after cooking.</p></section><section><h4 class="font-extrabold text-slate-900 text-sm">Shopping list</h4><p>Add items manually or from meal suggestions. When stock is marked finished, choose which items to add to the shared list.</p></section><p class="text-amber-800">AI estimates can be wrong. Verify package dates and quantities yourself.</p></div>
+        <button onclick="closeGuideModal()" class="w-full py-2.5 bg-slate-900 text-white font-extrabold text-xs rounded-xl">Close Guide</button>
+    </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2 rounded-2xl text-xs font-extrabold shadow-xl transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+    <i class="fa-solid fa-circle-info text-brand-400"></i>
+    <span id="toastMsg">Notification</span>
+</div>
+
+<!-- FIREBASE SDK & APP LOGIC -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+
+   const firebaseConfig = {
+      apiKey: "AIzaSyCkeB4QYQjYLWm9yJgmreIr89t--VSLbPA",
+      authDomain: "tubby-815ef.firebaseapp.com",
+      projectId: "tubby-815ef",
+      storageBucket: "tubby-815ef.firebasestorage.app",
+      messagingSenderId: "649393483068",
+      appId: "1:649393483068:web:5d358396a01385dda44239",
+      measurementId: "G-QT92X1D3HR"
+   };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let activeFamilyId = null;
+    let activeMemberId = null;
+    let currentUserProfileId = null;
+    let isAdminLoggedIn = false;
+    let currentUserEmail = null;
+    let familyGeminiApiKey = '';
+
+    let profiles = [];
+    let entries = [];
+    let weightLogs = [];
+    let pendingUsers = [];
+    let foodInventory = [];
+    let shoppingItems = [];
+    let pendingFoodScan = [];
+    let mealSuggestionMode = 'stock';
+
+    let unsubs = [];
+
+    let currentPhotoBase64 = null;
+    let currentAvatarBase64 = null;
+    let adminProfileEditMode = false;
+
+    // REGISTER SERVICE WORKER
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.debug('SW registration failed:', err));
+        });
+    }
+
+    // AUTH STATE LISTENER
+    // Keep authentication errors visible instead of leaving the app silently stuck at the login screen.
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            cleanupListeners();
+            activeFamilyId = null;
+            activeMemberId = null;
+            currentUserProfileId = null;
+            isAdminLoggedIn = false;
+            currentUserEmail = null;
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('adminGearBtn').classList.add('hidden');
+            return;
+        }
+
+        currentUserEmail = user.email;
+        try {
+            const userDocSnap = await getDoc(doc(db, "users", user.uid));
+            if (!userDocSnap.exists()) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Signed in, but no Tubby account record was found. Your signup may have been interrupted. Contact the family admin.");
+                return;
+            }
+
+            const userData = userDocSnap.data();
+            if (!userData.familyId) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Your Tubby account is missing its family ID. Ask the family admin to check your account.");
+                return;
+            }
+
+            activeFamilyId = userData.familyId;
+            currentUserProfileId = userData.profileId || null;
+            isAdminLoggedIn = userData.isAdmin === true;
+
+            // Load the shared family AI key so it survives refreshes and is available
+            // to trusted family accounts on their own devices.
+            const familyDocSnap = await getDoc(doc(db, "families", activeFamilyId));
+            familyGeminiApiKey = familyDocSnap.exists() ? (familyDocSnap.data().geminiApiKey || '') : '';
+
+            if (!currentUserProfileId && !isAdminLoggedIn) {
+                document.getElementById('authModal').classList.remove('hidden');
+                showToast("Your account is pending admin approval and profile linking.");
+                return;
+            }
+
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('headerFamilyLabel').textContent = `Family: ${activeFamilyId}`;
+            document.getElementById('familyIdDisplay').textContent = `Family ID: ${activeFamilyId}`;
+            document.getElementById('adminGearBtn').classList.toggle('hidden', !isAdminLoggedIn);
+            setupFamilyListeners(activeFamilyId);
+            openManager('home');
+        } catch (err) {
+            console.error("Tubby account loading failed:", err);
+            document.getElementById('authModal').classList.remove('hidden');
+            showToast("Signed in, but Tubby couldn't load your account: " + (err?.message || "Account loading error") + ". Please try again or contact support.");
+        }
+    });
+
+    function cleanupListeners() {
+        unsubs.forEach(unsub => unsub());
+        unsubs = [];
+    }
+
+    function setupFamilyListeners(familyId) {
+        cleanupListeners();
+
+        // Keep the shared family API key in sync across already-open family devices.
+        const familyDocRef = doc(db, "families", familyId);
+        unsubs.push(onSnapshot(familyDocRef, (snapshot) => {
+            familyGeminiApiKey = snapshot.exists() ? (snapshot.data().geminiApiKey || '') : '';
+        }, (err) => {
+            console.error("Family settings listener failed:", err);
+        }));
+
+        // Shared food inventory: isolated in its own family subcollection.
+        const inventoryRef = collection(db, "families", familyId, "foodInventory");
+        unsubs.push(onSnapshot(inventoryRef, (snapshot) => {
+            foodInventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (document.getElementById('viewFood') && !document.getElementById('viewFood').classList.contains('hidden')) renderFoodManager();
+        }, (err) => {
+            console.error("Food inventory listener failed:", err);
+            if (document.getElementById('viewFood') && !document.getElementById('viewFood').classList.contains('hidden')) {
+                document.getElementById('foodManagerStatus').textContent = "Stock could not be loaded. Check family access or Firestore permissions, then retry.";
+            }
+        }));
+
+        // Shared shopping list updates across family devices.
+        const shoppingRef = collection(db, "families", familyId, "shoppingList");
+        unsubs.push(onSnapshot(shoppingRef, (snapshot) => {
+            shoppingItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (document.getElementById('shoppingListItems')) renderShoppingList();
+        }, (err) => { console.error('Shopping list listener failed:', err); showToast('Shopping list could not load. Check Firestore permissions.'); }));
+
+        // Listen to Profiles
+        const profRef = collection(db, "families", familyId, "profiles");
+        unsubs.push(onSnapshot(profRef, (snapshot) => {
+            profiles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (!activeMemberId && profiles.length > 0) {
+                activeMemberId = currentUserProfileId || profiles[0].id;
+            }
+            renderFamilySelector();
+            renderProfilesList();
+            renderAdminProfilesList();
+            refreshActiveView();
+        }));
+
+        // Listen to Entries
+        const entryRef = collection(db, "families", familyId, "entries");
+        unsubs.push(onSnapshot(entryRef, (snapshot) => {
+            entries = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            refreshActiveView();
+            if (document.getElementById('viewFruitVeg') && !document.getElementById('viewFruitVeg').classList.contains('hidden')) {
+                renderFruitVegTab();
+            }
+        }));
+
+        // Listen to Weight Logs
+        const weightRef = collection(db, "families", familyId, "weights");
+        unsubs.push(onSnapshot(weightRef, (snapshot) => {
+            weightLogs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (document.getElementById('viewWeight') && !document.getElementById('viewWeight').classList.contains('hidden')) {
+                renderWeightTab();
+            }
+        }));
+
+        // Listen to Pending Users for Admin
+        if (isAdminLoggedIn) {
+            const pendingRef = collection(db, "families", familyId, "pendingUsers");
+            unsubs.push(onSnapshot(pendingRef, (snapshot) => {
+                pendingUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderAdminPendingList();
+            }));
+        }
+    }
+
+    // AUTHENTICATION FORMS
+    window.switchAuthTab = function(type) {
+        ['login', 'signup'].forEach(t => {
+            const btn = document.getElementById(`authTab${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+            if (btn) btn.className = type === t ? 'py-2 rounded-xl bg-white text-slate-800 shadow-xs cursor-pointer' : 'py-2 rounded-xl text-slate-500 cursor-pointer';
+            const form = document.getElementById(`user${t.charAt(0).toUpperCase() + t.slice(1)}Form`);
+            if (form) form.classList.toggle('hidden', type !== t);
+        });
+    }
+
+    window.handleUserLoginSubmit = async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value.trim();
+        const pass = document.getElementById('loginPassword').value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+            showToast("Successfully signed in!");
+        } catch (err) {
+            showToast("❌ " + err.message);
+        }
+    }
+
+    window.handleUserSignupSubmit = async function(e) {
+        e.preventDefault();
+        const familyId = document.getElementById('signupFamilyId').value.trim().toUpperCase();
+        const name = document.getElementById('signupUserName').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
+        const pass = document.getElementById('signupPassword').value;
+
+        if (!familyId || !name || !email || !pass) {
+            showToast("Please complete all signup fields.");
+            return;
+        }
+
+        let cred;
+        try {
+            try {
+                cred = await createUserWithEmailAndPassword(auth, email, pass);
+            } catch (createErr) {
+                // Recover accounts where Firebase Auth succeeded previously but Firestore setup failed.
+                if (createErr.code !== "auth/email-already-in-use") throw createErr;
+                cred = await signInWithEmailAndPassword(auth, email, pass);
+                const existingUser = await getDoc(doc(db, "users", cred.user.uid));
+                if (existingUser.exists()) {
+                    showToast("This account is already set up. Please use Sign In.");
+                    return;
+                }
+            }
+
+            const uid = cred.user.uid;
+            const userRef = doc(db, "users", uid);
+            const famRef = doc(db, "families", familyId);
+            const profileRef = doc(collection(db, "families", familyId, "profiles"));
+            const pendingRef = doc(db, "families", familyId, "pendingUsers", uid);
+            const now = Date.now();
+
+            await runTransaction(db, async (transaction) => {
+                const famSnap = await transaction.get(famRef);
+                const userSnap = await transaction.get(userRef);
+
+                if (userSnap.exists()) {
+                    throw new Error("A Tubby account record already exists for this login. Please use Sign In.");
+                }
+
+                const isAdmin = !famSnap.exists();
+                if (isAdmin) {
+                    transaction.set(famRef, {
+                        familyId,
+                        createdBy: uid,
+                        createdAt: now
+                    });
+                    transaction.set(userRef, {
+                        email, familyId, name, isAdmin: true,
+                        profileId: profileRef.id, createdAt: now
+                    });
+                    transaction.set(profileRef, {
+                        name,
+                        emoji: '🥑',
+                        dob: '1990-01-01',
+                        goal: 'Healthy Eating',
+                        role: 'Adult',
+                        calTarget: 2000,
+                        proteinTarget: 120,
+                        carbsTarget: 200,
+                        fatTarget: 65,
+                        trackMacros: true,
+                        trackPortions: false,
+                        trackReactions: false,
+                        showToKids: true,
+                        showToAdults: true,
+                        avatar: null,
+                        updatedAt: now
+                    });
+                } else {
+                    transaction.set(userRef, {
+                        email, familyId, name, isAdmin: false,
+                        profileId: null, createdAt: now
+                    });
+                    transaction.set(pendingRef, {
+                        uid, email, name, createdAt: now
+                    });
+                }
+            });
+
+            const completedUser = (await getDoc(userRef)).data();
+            showToast(completedUser?.isAdmin
+                ? `Admin account created for ${familyId}!`
+                : "Account created! Waiting for Family Admin approval.");
+        } catch (err) {
+            console.error("Tubby signup/setup failed:", err);
+            showToast("❌ " + (err?.message || "Signup failed. Please try again."));
+        }
+    }
+
+    window.logout = async function() {
+        await signOut(auth);
+        location.reload();
+    }
+
+    // TABS & UI ROUTING
+    // Inline HTML handlers run outside this module's scope, so expose a safe wrapper.
+    window.openAddFamilyProfileModal = function() {
+        // This handler is called from HTML, so read module-scoped auth state inside the wrapper.
+        window.openProfileEditModal(null, isAdminLoggedIn);
+    }
+
+    window.openActiveProfileEditModal = function() {
+        if (!activeMemberId) {
+            showToast("Please select a family profile first.");
+            return;
+        }
+        openProfileEditModal(activeMemberId, isAdminLoggedIn);
+    }
+
+    let activeManager='home', activeFoodPage='add';
+    window.openManager=function(manager){activeManager=manager;['viewHome','viewToday','viewFruitVeg','viewWeight','viewFamily','viewFood'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.getElementById('dietBottomNav')?.classList.toggle('hidden',manager!=='diet');document.getElementById('foodBottomNav')?.classList.toggle('hidden',manager!=='food');document.getElementById('familySelectorBar')?.parentElement?.classList.toggle('hidden',manager!=='diet');const sw=document.getElementById('managerSwitchBtn');if(sw){sw.textContent=manager==='food'?'Diet':'Food';sw.className='rounded-xl '+(manager==='food'?'bg-emerald-50 text-emerald-700':'bg-purple-50 text-purple-700')+' px-2 py-2 text-[11px] font-extrabold';}if(manager==='home'){document.getElementById('viewHome')?.classList.remove('hidden');return;}if(manager==='food'){document.getElementById('viewFood')?.classList.remove('hidden');switchFoodPage(activeFoodPage);renderFoodManager();return;}switchTab('today');};
+    window.switchFoodPage=function(page){activeFoodPage=page;['add','stock','meals','shopping'].forEach(p=>{document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1))?.classList.toggle('hidden',p!==page);const b=document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1)+'Btn');if(b)b.className='rounded-xl py-2 text-[10px] font-extrabold flex flex-col items-center gap-1 '+(p===page?'text-brand-700':'text-slate-400');});if(page==='stock')renderFoodManager();if(page==='shopping')renderShoppingList();if(page==='meals'&&!document.getElementById('mealSuggestions')?.children.length)suggestMeals();};
+    window.switchTab=function(tab){if(tab==='food'){openManager('food');return;}const tabIds={today:'Today',fruitveg:'FruitVeg',weight:'Weight',family:'Family'};const selected=tabIds[tab];if(!selected)return;['viewHome','viewFood'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));['Today','FruitVeg','Weight','Family'].forEach(t=>{document.getElementById('view'+t)?.classList.add('hidden');const b=document.getElementById('tab'+t);if(b)b.className='py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]';});const top=document.getElementById('tabFamilyTop');if(top)top.className='flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-2 text-slate-700 text-xs font-extrabold';const view=document.getElementById('view'+selected);if(!view)return;view.classList.remove('hidden');const b=document.getElementById('tab'+selected);if(b)b.className='py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';if(tab==='family'&&top)top.className='flex items-center gap-1.5 rounded-xl bg-brand-50 px-2.5 py-2 text-brand-700 text-xs font-extrabold';if(tab==='fruitveg')renderFruitVegTab();if(tab==='weight')renderWeightTab();if(tab==='family')renderProfilesList();};
+
+
+
+
+    let activeFoodFilter = 'all';
+    function foodApiKey() { return familyGeminiApiKey || ''; }
+    function foodDateStatus(item) {
+      const date=item.useBy||item.bestBefore||''; if(!date) return {label:'Date not recorded',cls:'bg-slate-100 text-slate-600',review:true};
+      const now=new Date();now.setHours(0,0,0,0);const d=new Date(date+'T00:00:00');if(Number.isNaN(d.getTime()))return {label:'Date needs checking',cls:'bg-amber-100 text-amber-900',review:true};
+      const days=Math.round((d-now)/86400000);if(days<0)return {label:'Date passed — check immediately',cls:'bg-rose-100 text-rose-800',review:true};if(days===0)return {label:'Date is today',cls:'bg-rose-100 text-rose-800',review:true};if(days<=3)return {label:'Date approaching ('+days+'d)',cls:'bg-amber-100 text-amber-900',review:true};return {label:(item.dateType|| (item.useBy?'Use-by':'Best-before'))+': '+date,cls:'bg-emerald-50 text-emerald-800',review:false};
+    }
+    function renderFoodManager(){
+      const list=document.getElementById('foodInventoryList'),status=document.getElementById('foodManagerStatus');if(!list||!status)return;
+      if(!activeFamilyId){status.textContent='Sign in to view shared family stock.';return;}
+      const needs=x=>!!x.needsReview||!String(x.quantity||'').trim()||!String(x.storage||'').trim()||!(x.useBy||x.bestBefore)||foodDateStatus(x).review;
+      const visible=foodInventory.filter(x=>activeFoodFilter==='needsReview'?needs(x):activeFoodFilter==='all'||(x.storage||'Pantry')===activeFoodFilter).sort((a,b)=>(needs(a)?0:1)-(needs(b)?0:1));
+      status.textContent=foodInventory.length+' items · '+foodInventory.filter(needs).length+' need checking';list.innerHTML='';
+      if(!visible.length){list.innerHTML='<div class="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">No items in this filter.</div>';return;}
+      const table=document.createElement('div');table.className='border border-slate-200 rounded-xl overflow-hidden';
+      visible.forEach((item,index)=>{const date=foodDateStatus(item),review=needs(item);const row=document.createElement('div');row.className='grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center px-2.5 py-2 '+(index%2?'bg-white':'bg-slate-50')+(index?' border-t border-slate-100':'');const info=document.createElement('div');info.className='min-w-0';const name=document.createElement('div');name.className='text-xs font-extrabold truncate';name.textContent=item.name||'Unnamed item';const details=document.createElement('div');details.className='text-[10px] text-slate-500 truncate';details.textContent=(item.quantity||'Amount missing')+' · '+(item.storage||'Location missing')+' · '+(item.useBy?'Use-by '+item.useBy:item.bestBefore?'Best-before '+item.bestBefore:'Date missing');info.append(name,details);
+      if(review){const missing=[];if(!item.quantity)missing.push('amount');if(!item.storage)missing.push('location');if(!(item.useBy||item.bestBefore))missing.push('expiry date');if(item.needsReview&&missing.length===0)missing.push(item.uncertainty||'confirm AI estimate');const warn=document.createElement('div');warn.className='text-[10px] text-amber-800 font-bold mt-0.5';warn.textContent='Check: '+missing.join(', ')+(date.review&&date.label!=='Date not recorded'?' · '+date.label:'');info.append(warn);}
+      const actions=document.createElement('div');actions.className='flex items-center gap-1';const edit=document.createElement('button');edit.className='rounded-lg bg-slate-200 text-slate-700 px-2 py-1.5 text-[10px] font-bold';edit.textContent='Edit';edit.onclick=()=>editFoodItem(item.id);const amount=document.createElement('button');amount.className='rounded-lg bg-emerald-600 text-white px-2 py-1.5 text-[10px] font-bold';amount.textContent='Qty';amount.title='Update remaining amount';amount.onclick=()=>updateFoodAmount(item.id);actions.append(edit,amount);row.append(info,actions);table.append(row);});list.append(table);renderShoppingList();
+    }
+    window.setFoodFilter=function(filter){activeFoodFilter=filter;const ids={all:'foodFilterAll',Fridge:'foodFilterFridge',Freezer:'foodFilterFreezer',Pantry:'foodFilterPantry',needsReview:'foodFilterReview'};Object.entries(ids).forEach(([key,id])=>{const el=document.getElementById(id);if(el)el.className='shrink-0 rounded-lg px-3 py-2 text-[11px] font-bold '+(key===filter?(key==='needsReview'?'bg-amber-300 text-amber-950':'bg-slate-900 text-white'):'bg-slate-100 text-slate-600');});renderFoodManager();};
+    let foodModalItemId = null;
+    let foodModalMode = 'edit';
+    window.openFoodItemModal = function(id=null, amountOnly=false) {
+      if(!activeFamilyId) return showToast('Sign in first.');
+      foodModalItemId=id; foodModalMode=amountOnly?'amount':(id?'edit':'add');
+      const x=id?foodInventory.find(i=>i.id===id):{};
+      document.getElementById('foodItemModalTitle').textContent=amountOnly?'Update remaining stock':(id?'Edit food item':'Add food to stock');
+      document.getElementById('foodItemNameWrap').classList.toggle('hidden',amountOnly);
+      document.getElementById('foodItemStorageWrap').classList.toggle('hidden',amountOnly);
+      document.getElementById('foodItemDateWrap').classList.toggle('hidden',amountOnly);
+      document.getElementById('foodItemDetailsWrap').classList.toggle('hidden',amountOnly);
+      document.getElementById('foodItemAmountLabel').textContent=amountOnly?'New remaining amount (type FINISHED to remove)': 'Remaining amount / volume';
+      document.getElementById('foodItemName').value=x.name||'';document.getElementById('foodItemName').required=!amountOnly;
+      document.getElementById('foodItemAmount').value=x.quantity||'';
+      ['foodItemName','foodItemAmount','foodItemStorage','foodItemDateType','foodItemDate','foodItemPack','foodItemFill'].forEach(id=>document.getElementById(id)?.classList.remove('border-amber-400','bg-amber-50','ring-1','ring-amber-300'));
+      if(id&&!amountOnly){if(!x.name)document.getElementById('foodItemName').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!x.quantity)document.getElementById('foodItemAmount').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!x.storage)document.getElementById('foodItemStorage').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!(x.useBy||x.bestBefore))document.getElementById('foodItemDate').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(x.needsReview&&x.uncertainty)showToast('Needs checking: '+x.uncertainty);}
+      document.getElementById('foodItemStorage').value=x.storage||'Pantry';
+      document.getElementById('foodItemDateType').value=x.useBy?'Use-by':'Best-before';
+      document.getElementById('foodItemDate').value=x.useBy||x.bestBefore||'';
+      document.getElementById('foodItemFill').value=x.fillLevel||'';
+      document.getElementById('foodItemPack').value=x.packageSize||'';
+      document.getElementById('foodItemModal').classList.remove('hidden');
+      document.getElementById('foodItemModal').classList.add('flex');
+    };
+    window.closeFoodItemModal=function(){const m=document.getElementById('foodItemModal');m.classList.add('hidden');m.classList.remove('flex');};
+    window.addFoodItem=function(){window.openFoodItemModal();};
+    window.editFoodItem=function(id){window.openFoodItemModal(id);};
+    window.updateFoodAmount=function(id){window.openFoodItemModal(id,true);};
+    window.finishFoodItem=window.updateFoodAmount;
+    window.saveFoodItemForm=async function(event){
+      event.preventDefault();if(!activeFamilyId)return showToast('Sign in first.');
+      const name=document.getElementById('foodItemName').value.trim();
+      const quantity=document.getElementById('foodItemAmount').value.trim();
+      const storage=document.getElementById('foodItemStorage').value;
+      const date=document.getElementById('foodItemDate').value;
+      const dateType=document.getElementById('foodItemDateType').value;
+      const fillLevel=document.getElementById('foodItemFill').value.trim();
+      const packageSize=document.getElementById('foodItemPack').value.trim();
+      try {
+        if(foodModalMode==='amount'){
+          if(quantity.toLowerCase()==='finished'||quantity==='0'){
+            if(!confirm('Remove '+(foodInventory.find(i=>i.id===foodModalItemId)?.name||'this item')+' from available stock?'))return;
+            await deleteDoc(doc(db,'families',activeFamilyId,'foodInventory',foodModalItemId));
+          } else {
+            if(!quantity)return showToast('Enter the remaining amount, or FINISHED.');
+            await updateDoc(doc(db,'families',activeFamilyId,'foodInventory',foodModalItemId),{quantity,needsReview:false,confirmedAt:Date.now(),updatedAt:Date.now(),updatedBy:currentUserEmail||''});
+          }
+        } else {
+          if(!name)return showToast('Enter a food/product name.');
+          const data={name,quantity,storage,bestBefore:date&&dateType==='Best-before'?date:'',useBy:date&&dateType==='Use-by'?date:'',dateType,fillLevel,packageSize,source:foodModalMode==='add'?'Manual entry':(foodInventory.find(i=>i.id===foodModalItemId)?.source||'Manual entry'),needsReview:!quantity||!date,confirmedAt:Date.now(),updatedAt:Date.now(),updatedBy:currentUserEmail||''};
+          if(foodModalMode==='add') await setDoc(doc(collection(db,'families',activeFamilyId,'foodInventory')),data);
+          else await updateDoc(doc(db,'families',activeFamilyId,'foodInventory',foodModalItemId),data);
+        }
+        closeFoodItemModal();showToast(foodModalMode==='add'?'Added to family stock.':'Stock updated.');
+      } catch(e){console.error(e);showToast('Could not save stock: '+(e.code||e.message||'permission error'));}
+    };
+    window.openStockDeductionModal=function(candidates,title='Deduct ingredients from stock',suggestedIds=null,proposals={}){
+      const modal=document.getElementById('stockDeductionModal'),list=document.getElementById('stockDeductionItems');
+      document.getElementById('stockDeductionTitle').textContent=title;list.innerHTML='';
+      if(!candidates.length){showToast('No stock items available to review.');return;}
+      candidates.forEach((item,i)=>{const row=document.createElement('div');row.className='rounded-xl border border-slate-200 p-3 space-y-2 bg-white';const label=document.createElement('label');label.className='flex gap-2 items-center text-sm font-bold';const check=document.createElement('input');check.type='checkbox';check.checked=suggestedIds?suggestedIds.includes(item.id):true;check.dataset.index=i;const name=document.createElement('span');name.textContent=item.name+' (current: '+(item.quantity||'unknown')+')';label.append(check,name);const proposal=proposals[item.id];const hint=document.createElement('p');hint.className='text-[11px] text-purple-800';hint.textContent=proposal?(proposal.amount?'AI estimates use: '+proposal.amount+' · '+(proposal.reason||'Please check')+' · confidence: '+(proposal.confidence||'low'):'AI match: '+(proposal.reason||'Please check')+' · no reliable quantity estimate'):'No quantity estimate — enter the new remaining amount if known.';const amount=document.createElement('input');amount.className='w-full border border-slate-200 rounded-xl p-2 text-sm';amount.placeholder='New remaining amount, or FINISHED';amount.value=proposal?.remainingQuantity||item.quantity||'';amount.dataset.index=i;row.append(label,hint,amount);list.append(row);});
+      window.stockDeductionPending=candidates;modal.classList.remove('hidden');modal.classList.add('flex');
+    };
+    window.closeStockDeductionModal=function(){const m=document.getElementById('stockDeductionModal');m.classList.add('hidden');m.classList.remove('flex');};
+    window.saveStockDeduction=function(){const candidates=window.stockDeductionPending||[];const rows=Array.from(document.querySelectorAll('#stockDeductionItems input[data-index]:not([type=checkbox])'));const selected=new Set(Array.from(document.querySelectorAll('#stockDeductionItems input[type=checkbox]:checked')).map(x=>Number(x.dataset.index)));(async()=>{try{const depleted=[];for(const input of rows){const i=Number(input.dataset.index);if(!selected.has(i))continue;const item=candidates[i],amount=input.value.trim();if(!amount)continue;if(amount.toLowerCase()==='finished'||amount==='0'){await deleteDoc(doc(db,'families',activeFamilyId,'foodInventory',item.id));depleted.push({name:item.name,source:'meal depletion'});}else await updateDoc(doc(db,'families',activeFamilyId,'foodInventory',item.id),{quantity:amount,needsReview:false,confirmedAt:Date.now(),updatedAt:Date.now(),updatedBy:currentUserEmail||''});}closeStockDeductionModal();showToast('Confirmed stock updates saved.');if(depleted.length)openDepletedStockPrompt(depleted);}catch(e){console.error(e);showToast('Some stock updates failed: '+(e.code||e.message));}})();};
+window.openDepletedStockPrompt=function(items){window.depletedStockPending=items;const modal=document.getElementById('depletedStockModal'),list=document.getElementById('depletedStockItems');list.innerHTML='';items.forEach((item,i)=>{const label=document.createElement('label');label.className='flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm';const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.index=i;const name=document.createElement('span');name.textContent=item.name+' — now out of stock';label.append(cb,name);list.append(label);});modal.classList.remove('hidden');modal.classList.add('flex');};
+window.closeDepletedStockPrompt=function(){const m=document.getElementById('depletedStockModal');m.classList.add('hidden');m.classList.remove('flex');};
+window.addDepletedToShopping=function(){(async()=>{try{const items=window.depletedStockPending||[],chosen=Array.from(document.querySelectorAll('#depletedStockItems input[type=checkbox]:checked')).map(x=>items[Number(x.dataset.index)]).filter(Boolean);for(const item of chosen){if(!shoppingItems.some(x=>String(x.name||'').trim().toLowerCase()===item.name.trim().toLowerCase()&&!x.checked))await setDoc(doc(collection(db,'families',activeFamilyId,'shoppingList')),{name:item.name,checked:false,createdAt:Date.now(),updatedAt:Date.now(),addedBy:currentUserEmail||'',source:'meal depletion'});}closeDepletedStockPrompt();showToast(chosen.length?chosen.length+' item(s) added to the shared shopping list.':'No items selected.');}catch(e){console.error(e);showToast('Could not add items to the shopping list.');}})();};
+    window.addFoodFromTextAI=async function(){const input=document.getElementById('foodTextToAI'),notes=input.value.trim();if(!notes)return showToast('Type one or more food items first.');if(!foodApiKey())return showToast('Ask your family admin to save the Gemini API key in Admin Settings.');const status=document.getElementById('foodScanStatus');status.className='rounded-xl p-3 text-xs border bg-blue-50 border-blue-200';status.textContent='Asking AI to organise your typed food list…';status.classList.remove('hidden');try{const promptText='Convert this user-typed household food stock list into separate inventory items. Preserve quantities and dates only when explicitly stated. Do not invent expiry dates, quantities or package sizes. If a value is missing, leave it empty and flag needsReview. Use storage Fridge, Freezer or Pantry, choosing Pantry only when unclear and flagging it. Return valid JSON only: {"items":[{"name":"...","quantity":"...","packageSize":"...","fillLevel":"...","storage":"Fridge|Freezer|Pantry","bestBefore":"YYYY-MM-DD or empty","useBy":"YYYY-MM-DD or empty","confidence":"high|medium|low","uncertainty":"...","needsReview":true,"category":"other"}]}. User list: '+notes;const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey());const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:promptText}]}]})});if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const data=await res.json();const raw=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('AI returned no readable result.');const parsed=JSON.parse(raw.replace(/\`\`\`json/g,'').replace(/\`\`\`/g,'').trim());pendingFoodScan=(parsed.items||[]).map(x=>({...x,storage:['Fridge','Freezer','Pantry'].includes(x.storage)?x.storage:'Pantry',needsReview:true,source:'Typed list + AI',confirmedAt:0}));if(!pendingFoodScan.length)throw new Error('No items found. Try a simpler list.');renderFoodScanReview();status.textContent='AI prepared '+pendingFoodScan.length+' item(s). Review and save them below.';status.className='rounded-xl p-3 text-xs border bg-amber-50 border-amber-200';}catch(e){console.error(e);status.textContent=e.message||'Could not process typed list.';status.className='rounded-xl p-3 text-xs border bg-rose-50 border-rose-200';}};
+    window.scanFoodImages=async function(input,mode){const files=Array.from(input.files||[]);input.value='';if(!files.length)return;switchFoodPage('add');if(!foodApiKey()){showToast('Ask your family admin to save the Gemini API key in Admin Settings.');return;}const status=document.getElementById('foodScanStatus');status.className='rounded-xl p-3 text-xs border bg-blue-50 border-blue-200';status.textContent='Compressing '+files.length+' photo(s)…';status.classList.remove('hidden');try{const parts=[{text:mode==='receipt'?'Read these grocery receipt photos. Combine sections into one list, avoid duplicate lines across overlapping photos, and return only products actually purchased. Infer dates only if explicitly printed.':'Inspect these fridge/freezer/pantry photos. Identify visible food products; estimate remaining quantity and container fullness only when reasonably possible. Do not invent expiry dates. Separate duplicate packages into count/quantity. Flag uncertain identification, size, amount, storage or date for human review.'}];for(const f of files){const data=await compressImageFile(f,{maxDimension:1200,maxBytes:350*1024,quality:.72});parts.push({inline_data:{mime_type:'image/jpeg',data:String(data).split(',').pop()}});}parts.push({text:'Return valid JSON only: {"items":[{"name":"...","quantity":"...","packageSize":"...","fillLevel":"...","storage":"Fridge|Freezer|Pantry","bestBefore":"YYYY-MM-DD or empty","useBy":"YYYY-MM-DD or empty","confidence":"high|medium|low","uncertainty":"short reason or empty","needsReview":true,"category":"produce|dairy|meat|frozen|canned|dry|sauce|other"}]}. Never infer a use-by date from appearance. If package date is unreadable, leave it empty and flag review.'});const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey());const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts}]})});if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const data=await res.json();const raw=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('AI returned no readable result.');const parsed=JSON.parse(raw.replace(/```json/g,'').replace(/```/g,'').trim());pendingFoodScan=(parsed.items||[]).map(x=>({...x,storage:['Fridge','Freezer','Pantry'].includes(x.storage)?x.storage:'Pantry',needsReview:true,source:mode==='receipt'?'Receipt scan':'Photo scan',confirmedAt:0}));if(!pendingFoodScan.length)throw new Error('No items detected. Try clearer photos or add items manually.');renderFoodScanReview();status.textContent='Found '+pendingFoodScan.length+' possible items. Review the highlighted details before saving.';status.className='rounded-xl p-3 text-xs border bg-amber-50 border-amber-200';document.getElementById('foodScanReview').scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){console.error(e);status.textContent=e.message+' You can still add items manually.';status.className='rounded-xl p-3 text-xs border bg-rose-50 border-rose-200';} };
+    function renderFoodScanReview(){const box=document.getElementById('foodScanReview'),list=document.getElementById('foodScanReviewItems');box.classList.remove('hidden');list.innerHTML='';pendingFoodScan.forEach((x,i)=>{const row=document.createElement('div');row.className='rounded-xl bg-white border border-amber-200 p-3 space-y-2';row.innerHTML='<div class="flex items-center justify-between gap-2"><b class="text-xs">Item '+(i+1)+'</b><span class="text-[10px] rounded-full bg-amber-100 px-2 py-1">'+(x.confidence||'uncertain')+' confidence</span></div><input data-field="name" data-i="'+i+'" class="w-full border rounded-lg p-2 text-xs" placeholder="Product name"><input data-field="quantity" data-i="'+i+'" class="w-full border rounded-lg p-2 text-xs" placeholder="Remaining quantity"><input data-field="packageSize" data-i="'+i+'" class="w-full border rounded-lg p-2 text-xs" placeholder="Pack size (if known)"><input data-field="fillLevel" data-i="'+i+'" class="w-full border rounded-lg p-2 text-xs" placeholder="Container fullness (if applicable)"><select data-field="storage" data-i="'+i+'" class="w-full border rounded-lg p-2 text-xs"><option>Fridge</option><option>Freezer</option><option>Pantry</option></select><button type="button" data-toggle-date="'+i+'" class="w-full rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 py-2 text-xs font-bold">'+((x.useBy||x.bestBefore)?'Edit date':'＋ Add date')+'</button><div data-date-panel="'+i+'" class="'+((x.useBy||x.bestBefore)?'':'hidden ')+'space-y-2 rounded-lg bg-slate-50 p-2"><div class="grid grid-cols-2 gap-2"><label class="text-[10px] font-bold">Best-before<input data-field="bestBefore" data-i="'+i+'" type="date" class="block w-full border rounded p-1 mt-1 text-xs"></label><label class="text-[10px] font-bold">Use-by<input data-field="useBy" data-i="'+i+'" type="date" class="block w-full border rounded p-1 mt-1 text-xs"></label></div><label class="block text-[10px] font-bold">Or photograph the date label</label><input data-date-photo="'+i+'" type="file" accept="image/*" capture="environment" class="hidden"><button type="button" data-date-camera="'+i+'" class="w-full rounded-lg bg-indigo-600 text-white py-2 text-xs font-extrabold">Take photo of date</button><p data-date-status="'+i+'" class="hidden text-[10px] text-slate-600"></p></div><p class="text-[10px] text-amber-800">'+(x.uncertainty||'Check product, amount and date. AI cannot reliably read every package label.')+'</p><button data-remove="'+i+'" class="text-xs text-rose-700 font-bold">Remove false detection</button>';row.querySelectorAll('[data-field]').forEach(el=>{const key=el.dataset.field;el.value=x[key]||(key==='storage'?x.storage:'');el.onchange=()=>{pendingFoodScan[i][key]=el.value;if(key==='bestBefore'&&el.value)pendingFoodScan[i].useBy='';if(key==='useBy'&&el.value)pendingFoodScan[i].bestBefore='';};});row.querySelector('[data-toggle-date]').onclick=()=>{const panel=row.querySelector('[data-date-panel]');panel.classList.toggle('hidden');};row.querySelector('[data-date-camera]').onclick=()=>row.querySelector('[data-date-photo]').click();row.querySelector('[data-date-photo]').onchange=function(){window.scanFoodDatePhoto(this,i);};row.querySelector('[data-remove]').onclick=()=>{pendingFoodScan.splice(i,1);renderFoodScanReview();};list.append(row);});}
+     window.scanFoodDatePhoto=async function(input,index){const file=input.files&&input.files[0];input.value='';if(!file||!pendingFoodScan[index])return;if(!foodApiKey())return showToast('Ask your family admin to save the Gemini API key in Admin Settings.');const status=document.querySelector('[data-date-status="'+index+'"]');status.classList.remove('hidden');status.textContent='Reading the date label…';try{const dataUrl=await compressImageFile(file,{maxDimension:1400,maxBytes:450*1024,quality:.78});const now=new Date(), todayISO=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'), locale=Intl.DateTimeFormat().resolvedOptions().locale;const prompt='Read the printed date on this food package label. The device current local date is '+todayISO+' and the user locale is '+locale+'. Identify whether it is a use-by or best-before date. IMPORTANT: month names and yearless dates are common. For example, a clearly printed label "Use by 05 NOV" means 5 November, not an unreadable date. If the label omits the year, assume the current year; however, if today is in December and the printed month is January, assume January of the following year. Do not confuse batch codes or times with the date. Return an ISO calendar date YYYY-MM-DD, regardless of the local display format. Only return empty if the day/month itself cannot be read or the label cannot be confidently identified as a use-by/best-before date. Return JSON only: {"dateType":"Use-by|Best-before|unknown","date":"YYYY-MM-DD or empty","productName":"visible product name or empty","note":"short uncertainty note or empty"}. If multiple dates appear, choose the clearly labelled use-by/best-before date, not batch or manufacture codes.';const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey());const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt},{inline_data:{mime_type:'image/jpeg',data:String(dataUrl).split(',').pop()}}]}]})});if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const result=await res.json(),raw=result.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('No readable date returned.');const parsed=JSON.parse(raw.replace(/```json/g,'').replace(/```/g,'').trim());if(!/^\d{4}-\d{2}-\d{2}$/.test(parsed.date||'')||!['Use-by','Best-before'].includes(parsed.dateType)){status.textContent='Could not confidently read a labelled date. Please type it into the date field.';return;}pendingFoodScan[index].bestBefore=parsed.dateType==='Best-before'?parsed.date:'';pendingFoodScan[index].useBy=parsed.dateType==='Use-by'?parsed.date:'';if(parsed.productName&&!pendingFoodScan[index].name)pendingFoodScan[index].name=parsed.productName;renderFoodScanReview();const updated=document.querySelector('[data-date-status="'+index+'"]');if(updated){updated.classList.remove('hidden');updated.textContent='Read '+parsed.dateType.toLowerCase()+': '+parsed.date+'. Please check it matches the package.';} }catch(e){console.error(e);status.textContent=e.message||'Could not read the date. Please type it instead.';}}; 
+     window.saveScannedFoodItems=async function(){if(!activeFamilyId)return showToast('Sign in first.');const fields=document.querySelectorAll('#foodScanReviewItems [data-field]');fields.forEach(el=>{pendingFoodScan[Number(el.dataset.i)][el.dataset.field]=el.value;});if(!pendingFoodScan.length)return showToast('No items to save.');try{for(const x of pendingFoodScan){if(!x.name||!x.name.trim())continue;const validDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'');const dateType=x.useBy?'Use-by':x.bestBefore?'Best-before':'';await setDoc(doc(collection(db,'families',activeFamilyId,'foodInventory')),{name:x.name.trim(),quantity:x.quantity||'',packageSize:x.packageSize||'',fillLevel:x.fillLevel||'',storage:x.storage||'Pantry',bestBefore:validDate(x.bestBefore)?x.bestBefore:'',useBy:validDate(x.useBy)?x.useBy:'',dateType,source:x.source||'AI scan',confidence:x.confidence||'low',uncertainty:x.uncertainty||'',needsReview:!!x.needsReview||x.confidence!=='high'||!x.quantity||(!x.bestBefore&&!x.useBy),confirmedAt:0,updatedAt:Date.now(),updatedBy:currentUserEmail||''});}pendingFoodScan=[];document.getElementById('foodScanReview').classList.add('hidden');showToast('Reviewed detections saved. Confirm details on amber items.');}catch(e){console.error(e);showToast('Some items could not be saved. Check Firestore permissions and try again.');}};
+    window.addShoppingItem=async function(){const input=document.getElementById('shoppingNewItem'),raw=input.value.trim();if(!raw)return;if(!activeFamilyId)return showToast('Sign in first.');const names=raw.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);try{for(const name of names){await setDoc(doc(collection(db,'families',activeFamilyId,'shoppingList')),{name,checked:false,createdAt:Date.now(),updatedAt:Date.now(),addedBy:currentUserEmail||'',source:'manual',category:'Other'});}input.value='';if(names.length>1)showToast(names.length+' items added. Use Organise list with AI to clean up names and sections.');}catch(e){showToast('Could not save shared list. Check Firestore permissions.');}};
+    const shopSections=['Fruit & veg','Bakery','Dairy & eggs','Meat & fish','Frozen','Canned & jars','Pasta, rice & grains','Snacks','Drinks','Household','Other'];
+    function shopCategory(x){const c=x.category||'Other';return shopSections.includes(c)?c:'Other';}
+    window.organiseShoppingListAI=async function(){if(!activeFamilyId)return showToast('Sign in first.');const source=shoppingItems.filter(x=>!x.checked);const typed=document.getElementById('shoppingNewItem')?.value.trim()||'';if(typed)source.push(...typed.split(/[,;\n]+/).map(name=>({name:name.trim(),id:null})).filter(x=>x.name));if(!source.length)return showToast('Add unchecked items or type a comma-separated list first.');if(!foodApiKey())return showToast('Ask your family admin to save the Gemini API key in Admin Settings.');const status=document.getElementById('shoppingAiStatus');status.className='text-[11px] text-purple-700';status.textContent='AI is standardising names and sorting supermarket sections…';status.classList.remove('hidden');try{const prompt='Standardise these shopping items into common supermarket product names, preserving any stated quantity. Assign each exactly one category from: '+shopSections.join(', ')+'. Do not invent brands or quantities. Return JSON only: {"items":[{"index":0,"standardName":"...","category":"..."}]}. Items: '+JSON.stringify(source.map((x,i)=>({index:i,name:x.name})));const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey());const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const data=await res.json(),raw=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('AI returned no result.');const parsed=JSON.parse(raw.replace(/```json/g,'').replace(/```/g,'').trim());for(const item of parsed.items||[]){const x=source[Number(item.index)];if(!x)continue;const cleaned={name:String(item.standardName||x.name).trim(),category:shopSections.includes(item.category)?item.category:'Other',updatedAt:Date.now()};if(x.id)await updateDoc(doc(db,'families',activeFamilyId,'shoppingList',x.id),cleaned);else await setDoc(doc(collection(db,'families',activeFamilyId,'shoppingList')),{...cleaned,checked:false,createdAt:Date.now(),addedBy:currentUserEmail||'',source:'AI typed list'});}if(typed)document.getElementById('shoppingNewItem').value='';status.textContent='List organised by supermarket section.';showToast('Shopping list organised.');}catch(e){console.error(e);status.textContent='Could not organise with AI. Try again or keep using the list.';showToast(e.message||'AI organisation failed.');}};
+    window.finishShoppingTrip=async function(){if(!activeFamilyId)return showToast('Sign in first.');const done=shoppingItems.filter(x=>x.checked);if(!done.length)return showToast('Tick the items you bought first.');try{const archiveRef=doc(collection(db,'families',activeFamilyId,'shoppingArchives'));await setDoc(archiveRef,{completedAt:Date.now(),completedBy:currentUserEmail||'',items:done.map(x=>({name:x.name,category:shopCategory(x),source:x.source||'manual'})),itemCount:done.length});for(const x of done)await deleteDoc(doc(db,'families',activeFamilyId,'shoppingList',x.id));showToast(done.length+' bought item(s) archived. Unticked items remain on the list.');}catch(e){console.error(e);showToast('Could not archive this shop: '+(e.code||e.message));}};
+    function renderShoppingList(){const el=document.getElementById('shoppingListItems');if(!el)return;el.innerHTML='';const active=shoppingItems.filter(x=>!x.checked),checked=shoppingItems.filter(x=>x.checked);if(!shoppingItems.length){el.innerHTML='<p class="text-xs text-slate-500">Shopping list is empty.</p>';return;}const groups={};active.forEach(x=>{const c=shopCategory(x);(groups[c]||(groups[c]=[])).push(x);});shopSections.forEach(section=>{if(!groups[section]?.length)return;const group=document.createElement('section');group.className='space-y-1.5';const heading=document.createElement('h4');heading.className='text-[10px] uppercase tracking-wider font-extrabold text-slate-500 pt-1';heading.textContent=section;group.append(heading);groups[section].forEach(x=>{const row=document.createElement('div');row.className='flex items-center gap-2 rounded-xl border border-slate-100 p-2';const check=document.createElement('input');check.type='checkbox';check.checked=false;check.onchange=async()=>{try{await updateDoc(doc(db,'families',activeFamilyId,'shoppingList',x.id),{checked:check.checked,updatedAt:Date.now()});}catch(e){showToast('Could not update item.');}};const name=document.createElement('span');name.className='flex-1 text-xs text-slate-800';name.textContent=x.name;const edit=document.createElement('button');edit.className='text-xs font-bold text-slate-500';edit.textContent='Edit';edit.onclick=()=>{const editor=document.createElement('div');editor.className='flex gap-2 mt-2';const input=document.createElement('input');input.className='flex-1 min-w-0 border rounded-lg px-2 py-2 text-xs';input.value=x.name;input.setAttribute('aria-label','Edit shopping item');const save=document.createElement('button');save.className='rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold';save.textContent='Save';save.onclick=async()=>{if(!input.value.trim())return showToast('Enter an item name.');try{await updateDoc(doc(db,'families',activeFamilyId,'shoppingList',x.id),{name:input.value.trim(),updatedAt:Date.now()});}catch(e){showToast('Could not edit item.');}};const cancel=document.createElement('button');cancel.className='rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold';cancel.textContent='Cancel';cancel.onclick=()=>editor.remove();editor.append(input,save,cancel);row.parentElement.append(editor);input.focus();};const del=document.createElement('button');del.className='text-xs font-bold text-rose-600';del.textContent='×';del.onclick=async()=>{try{await deleteDoc(doc(db,'families',activeFamilyId,'shoppingList',x.id));}catch(e){showToast('Could not remove item.');}};row.append(check,name,edit,del);group.append(row);});el.append(group);});if(checked.length){const note=document.createElement('p');note.className='text-[10px] text-slate-400';note.textContent=checked.length+' ticked item(s) ready to archive when you finish shopping.';el.append(note);}}
+    window.setMealMode=function(mode){mealSuggestionMode=mode;document.getElementById('mealModeStock').className='rounded-xl p-2 text-[11px] font-bold '+(mode==='stock'?'bg-slate-900 text-white':'bg-slate-100 text-slate-600');document.getElementById('mealModeBudget').className='rounded-xl p-2 text-[11px] font-bold '+(mode==='budget'?'bg-slate-900 text-white':'bg-slate-100 text-slate-600');};
+    window.suggestMeals=async function(){const out=document.getElementById('mealSuggestions');if(!foodApiKey())return showToast('Family admin needs to save the Gemini API key in Admin Settings.');const loading=document.createElement('p');loading.dataset.mealLoading='1';loading.className='text-xs text-slate-500';loading.textContent='Thinking of meals using current stock…';out.prepend(loading);const stock=foodInventory.map(x=>({name:x.name,amount:x.quantity,storage:x.storage,date:x.useBy||x.bestBefore,needsReview:!!x.needsReview}));const promptText='Suggest 5 practical lunch/dinner meals for a family. Prioritise ingredients with the closest use-by/best-before dates first: '+(document.getElementById('prioritiseNearDate')?.checked!==false?'YES':'NO')+'. Flag meals that use items expiring within 3 days with usesSoonExpiry=true and list those items in nearDateItems. Mode: '+(mealSuggestionMode==='stock'?'ONLY use ingredients currently in inventory; do not assume pantry staples unless listed.':'Prefer stock and optionally use a few low-cost easy-to-find extras; list missing items clearly.')+'. Use near-date ingredients first where sensible. Do not assume uncertain stock is confirmed. Inventory: '+JSON.stringify(stock)+'. Existing shopping list: '+JSON.stringify(shoppingItems.map(x=>x.name))+'. Return JSON only {"meals":[{"name":"...","mealType":"Lunch or Dinner","servings":"...","minutes":25,"ingredients":[{"name":"...","amount":"...","fromStock":true}],"steps":["..."],"missing":["..."],"usesSoonExpiry":true,"caveats":"..."}]}. Avoid unsafe food advice and never claim a product is safe based only on a date/photo.';try{const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey()),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:promptText}]}]})});if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const data=await res.json();const raw=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('No suggestions returned.');const parsed=JSON.parse(raw.replace(/```json/g,'').replace(/```/g,'').trim());loading.remove();(parsed.meals||[]).forEach(meal=>{const card=document.createElement('div');card.className='border border-slate-200 rounded-2xl p-3 space-y-2';const title=document.createElement('div');title.className='font-black text-sm';title.textContent=meal.name+' · '+(meal.mealType||'Meal');const meta=document.createElement('p');meta.className='text-xs text-slate-500';meta.textContent=(meal.minutes||'?')+' min · '+(meal.servings||'Family servings');const ingredients=document.createElement('p');ingredients.className='text-xs';ingredients.textContent='Ingredients: ';(meal.ingredients||[]).forEach((x,i)=>{if(i)ingredients.append(document.createTextNode(', '));const part=document.createElement('span');part.className=x.fromStock?'text-emerald-700 font-semibold':'text-rose-600 font-semibold';part.textContent=x.name+(x.amount?' ('+x.amount+')':'');part.title=x.fromStock?'Available in stock':'Missing or not confirmed in stock';ingredients.append(part);});const near=document.createElement('p');near.className='text-[10px] font-extrabold text-amber-800';if(meal.usesSoonExpiry||meal.nearDateItems?.length)near.textContent='Use soon: '+((meal.nearDateItems||[]).join(', ')||'includes food approaching its date');const steps=document.createElement('ol');steps.className='list-decimal pl-5 text-xs space-y-1 hidden';(meal.steps||[]).forEach(st=>{const li=document.createElement('li');li.textContent=st;steps.append(li);});const caveat=document.createElement('p');caveat.className='text-[10px] text-amber-800 hidden';caveat.textContent=meal.caveats||'Check ingredients and amounts before cooking.';const recipe=document.createElement('button');recipe.className='rounded-lg bg-slate-100 text-slate-700 px-2 py-1.5 text-[10px] font-bold';recipe.textContent='Recipe';recipe.onclick=()=>{const show=steps.classList.contains('hidden');steps.classList.toggle('hidden',!show);caveat.classList.toggle('hidden',!show);recipe.textContent=show?'Hide recipe':'Recipe';};const actions=document.createElement('div');actions.className='flex gap-1.5';const shopping=document.createElement('button');shopping.className='flex-1 rounded-lg bg-indigo-50 text-indigo-800 px-2 py-1.5 text-[10px] font-bold';shopping.textContent='Add missing to shopping';shopping.onclick=async()=>{for(const n of meal.missing||[]){if(!shoppingItems.some(x=>x.name.toLowerCase()===String(n).toLowerCase()))await setDoc(doc(collection(db,'families',activeFamilyId,'shoppingList')),{name:n,checked:false,createdAt:Date.now(),updatedAt:Date.now(),addedBy:currentUserEmail||'',source:'meal suggestion'});}showToast('Missing ingredients added to shared list.');};const cook=document.createElement('button');cook.className='flex-1 rounded-lg bg-emerald-600 text-white px-2 py-1.5 text-[10px] font-bold';cook.textContent='Cooked it — update stock';cook.onclick=()=>deductMealStock(meal);actions.append(recipe,shopping,cook);card.append(title,meta,ingredients);if(near.textContent)card.append(near);card.append(steps,caveat,actions);while(out.children.length>=5)out.firstElementChild.remove();out.append(card);});if(!out.children.length)out.textContent='No meal suggestions returned. Try again or add more stock.';}catch(e){console.error(e);loading.remove();const err=document.createElement('p');err.className='text-xs text-rose-700';err.textContent='Could not generate meal ideas: '+e.message+' Check the saved Gemini key and try again.';out.prepend(err);}};
     async function proposeStockUpdatesFromMeal(mealText,title){
       if(!activeFamilyId||!foodInventory.length)return showToast('No family stock is available to review.');
       const candidates=foodInventory.filter(x=>x.name);
@@ -13,21 +1151,6 @@
         (parsed.deductions||[]).forEach(d=>{const item=candidates[Number(d.index)];if(item)proposals[item.id]={amount:String(d.amount||''),remainingQuantity:String(d.remainingQuantity||''),confidence:String(d.confidence||'low'),reason:String(d.reason||'AI estimate')};});
         openStockDeductionModal(candidates,title,Object.keys(proposals),proposals);
       }catch(e){console.warn('AI stock estimate unavailable',e);openStockDeductionModal(candidates,title);showToast('AI estimate unavailable; you can still review stock manually.');}
-    }
-    async function proposeStockUpdatesFromMeal(mealText,title){
-      if(!activeFamilyId||!foodInventory.length)return showToast('No family stock is available to review.');
-      const candidates=foodInventory.filter(x=>x.name);if(!candidates.length)return showToast('No named stock items to review.');
-      if(!foodApiKey()){openStockDeductionModal(candidates,title);return;}
-      showToast('Estimating ingredient use — please review every suggestion…');
-      try{
-        const stock=candidates.map((x,index)=>({index,name:x.name,quantity:x.quantity||'',packageSize:x.packageSize||'',storage:x.storage||''}));
-        const prompt='Identify only ingredients explicitly mentioned or strongly implied by this meal that match inventory. Never infer an ingredient from a generic word. For tea/coffee with milk, estimate 15-40 ml per cup only if milk is mentioned or strongly implied. Return use amount and unit, not remaining quantity. Use a unit compatible with stock; do not guess current quantities. Confidence must be high, medium, or low. Return JSON only: {"deductions":[{"index":0,"amount":"25 ml","confidence":"high","reason":"short reason"}]}. Meal: '+mealText+'. Inventory: '+JSON.stringify(stock)+'. If no plausible match return {"deductions":[]}.';
-        const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key='+encodeURIComponent(foodApiKey()),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
-        if(!res.ok)throw new Error('AI request failed (HTTP '+res.status+').');const data=await res.json(),raw=data.candidates?.[0]?.content?.parts?.[0]?.text;if(!raw)throw new Error('No AI result');
-        const parsed=JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim()),proposals={};
-        (parsed.deductions||[]).forEach(d=>{const item=candidates[Number(d.index)];if(!item||!d.amount)return;const confidence=String(d.confidence||'low').toLowerCase();const remaining=confidence==='high'?computeRemainingQuantity(item.quantity,d.amount):'';proposals[item.id]={amount:String(d.amount),remainingQuantity:remaining,confidence:['high','medium','low'].includes(confidence)?confidence:'low',reason:String(d.reason||'AI suggestion — verify before saving')};});
-        openStockDeductionModal(candidates,title,Object.keys(proposals),proposals);
-      }catch(e){console.warn('AI stock estimate unavailable',e);openStockDeductionModal(candidates,title);showToast('AI estimate unavailable; nothing was changed. Review stock manually if needed.');}
     }
     async function deductMealStock(meal){const lines=(meal.ingredients||[]).filter(x=>x.fromStock);if(!lines.length)return showToast('No ingredients were confidently linked to stock. Update stock manually.');const matches=[];for(const line of lines){const found=foodInventory.filter(x=>x.name.toLowerCase().includes(String(line.name).toLowerCase())||String(line.name).toLowerCase().includes(x.name.toLowerCase()));if(found.length===1&&!matches.some(x=>x.id===found[0].id))matches.push(found[0]);}openStockDeductionModal(matches,'Update stock after cooking '+meal.name);}
     window.saveShoppingNotes=function(){showToast('Use the shared shopping list above; it syncs across family devices.');};
