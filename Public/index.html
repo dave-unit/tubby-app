@@ -1006,22 +1006,27 @@
         const selected = tabIds[tab];
         if (!selected) return;
 
-        ['Today', 'FruitVeg', 'Weight', 'Family', 'Food'].forEach(t => {
+        ['Today', 'FruitVeg', 'Weight', 'Food'].forEach(t => {
             const sec = document.getElementById('view' + t);
             const btn = document.getElementById('tab' + t);
             if (sec) sec.classList.add('hidden');
             if (btn) btn.className = 'py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]';
         });
+        const familyView = document.getElementById('viewFamily');
+        if (familyView) familyView.classList.add('hidden');
+        const familyTopButton = document.getElementById('tabFamilyTop');
+        if (familyTopButton) familyTopButton.className = 'flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-2 text-slate-700 text-xs font-extrabold';
 
         const selectedView = document.getElementById('view' + selected);
         const selectedButton = document.getElementById('tab' + selected);
-        if (!selectedView || !selectedButton) {
+        if (!selectedView || (tab !== 'family' && !selectedButton)) {
             console.error('Tubby navigation target is missing:', selected);
             showToast("This section is temporarily unavailable. Please refresh Tubby.");
             return;
         }
         selectedView.classList.remove('hidden');
-        selectedButton.className = 'py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';
+        if (selectedButton) selectedButton.className = 'py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';
+        if (tab === 'family' && familyTopButton) familyTopButton.className = 'flex items-center gap-1.5 rounded-xl bg-brand-50 px-2.5 py-2 text-brand-700 text-xs font-extrabold';
 
         if (tab === 'fruitveg') renderFruitVegTab();
         if (tab === 'weight') renderWeightTab();
