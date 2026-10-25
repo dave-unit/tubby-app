@@ -263,6 +263,13 @@
             </div>
             <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all">Create Account (Pending Admin Approval)</button>
         </form>
+
+        <div class="border-t border-slate-100 pt-3 space-y-2">
+            <p class="text-center text-[11px] text-slate-500">New to Tubby or need help setting up your family?</p>
+            <button type="button" onclick="openGuideModal()" class="w-full py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-book-open"></i> Open Tubby User Guide
+            </button>
+        </div>
     </div>
 </div>
 
@@ -562,27 +569,85 @@
 </div>
 
 <!-- MODAL 6: USER GUIDE -->
-<div id="guideModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto hide-scrollbar">
+<div id="guideModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto hide-scrollbar">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i class="fa-solid fa-book-open text-brand-600"></i> Tubby User Manual</h3>
-            <button onclick="closeGuideModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i class="fa-solid fa-book-open text-brand-600"></i> Tubby User Guide</h3>
+            <button onclick="closeGuideModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs" aria-label="Close user guide"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
-            <div class="bg-purple-50 p-3 rounded-2xl border border-purple-200/80 space-y-1">
-                <div class="font-extrabold text-purple-900">🔑 Administrator Access</div>
-                <div class="text-[11px] text-purple-800">First registered user in a family automatically becomes admin, or can be assigned by existing admins.</div>
+        <div class="space-y-4 text-xs text-slate-600 leading-relaxed">
+            <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 space-y-1">
+                <h4 class="font-extrabold text-emerald-900 text-sm">Welcome to Tubby</h4>
+                <p class="text-emerald-900">Tubby helps your family record meals, nutrition, fruit and vegetable intake, and weight progress. Follow the steps below to set up your family.</p>
             </div>
-            <div class="space-y-1">
-                <h4 class="font-extrabold text-slate-800 text-xs">AI Scan Operations (Photos & Nutrition Labels)</h4>
-                <p>Snap a photo or upload packaging labels. The AI automatically decodes macros, calories, and fruit/veg servings.</p>
-            </div>
-            <div class="space-y-1">
-                <h4 class="font-extrabold text-slate-800 text-xs">Secure Family Isolation</h4>
-                <p>Your family’s information is kept private and organised within your family account.</p>
-            </div>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">1. Set up a family for the first time</h4>
+                <ol class="list-decimal pl-5 space-y-1.5">
+                    <li>Choose <strong>Sign Up</strong> on the login screen.</li>
+                    <li>Enter a new Family ID. Use a simple name such as <strong>SMITH_FAMILY</strong>; remember it exactly, because other adults joining your family will need the same ID. IDs are converted to uppercase.</li>
+                    <li>Enter your name, email address and a password, then create the account.</li>
+                    <li>If this Family ID does not already exist, Tubby creates the family and makes this first login account the <strong>Family Admin</strong>. A starter profile is created for the admin too.</li>
+                    <li>After signing in, open <strong>Admin Settings</strong> to configure the AI food scanner (see step 4), then use the Family area to add profiles for the people you want to track.</li>
+                </ol>
+                <p class="text-slate-500">If the Family ID already exists, a new login account is created as a pending request. The Family Admin must approve it before it can be used to access the family.</p>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">2. Login accounts and family member profiles are different</h4>
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-sky-900">Login account</p>
+                    <p class="text-sky-900">A login account uses an email address and password. It lets someone sign in to Tubby. The first account for a new family becomes its admin; additional accounts using the same Family ID need admin approval.</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-amber-900">Family member profile</p>
+                    <p class="text-amber-900">A profile represents a person whose meals, nutrition or weight may be tracked. Add profiles from the Family area. A profile does <strong>not</strong> automatically create a login account, and children or other family members who do not need to sign in can have a profile only.</p>
+                </div>
+                <p>For example, one parent can have a login account and create profiles for both parents and their children. Create separate login accounts only for people who need to access Tubby themselves.</p>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">3. Add people and manage access</h4>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Open the <strong>Family</strong> tab and choose <strong>+ Add Person</strong> to create a member profile. Set the person's role, goals and tracking preferences.</li>
+                    <li>The Family Admin can manage family profiles and approve pending login requests in Admin Settings.</li>
+                    <li>To give another adult their own login, ask them to choose <strong>Sign Up</strong> and enter your existing Family ID. The admin must approve their request.</li>
+                    <li>Keep your Family ID available for trusted household members who need their own login. Do not share account passwords.</li>
+                </ul>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">4. Set up Google Gemini for AI food scanning</h4>
+                <p>The photo scanner uses Google's Gemini AI to estimate food or product details from a meal photo or nutrition label. A Google account and a Gemini API key are needed to use this feature. You can still enter food details manually without scanning.</p>
+                <ol class="list-decimal pl-5 space-y-1.5">
+                    <li>Sign in to a Google account and open <a class="font-extrabold text-emerald-700 underline" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio – API keys</a>.</li>
+                    <li>Follow Google's prompts to create or select a project and create an API key. Keep the key private; do not post it publicly or send it to anyone you do not trust.</li>
+                    <li>Sign in to Tubby as the Family Admin and open <strong>Admin Settings</strong> using the shield icon near the top of the app.</li>
+                    <li>Paste the key into the <strong>Google Gemini API Key</strong> field, choose <strong>Test Key</strong> to check it, then save it.</li>
+                    <li>Try taking a food photo or uploading a nutrition label. Review the suggested values before saving your food entry.</li>
+                </ol>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
+                    <p class="font-extrabold text-amber-900">Important about the API key</p>
+                    <p class="text-amber-900">In the current version, Tubby saves the key in this browser on this device; it is not automatically shared across the family’s other devices. If another device needs AI scanning, configure a key there too. Google may apply usage limits or charges depending on its current terms and account setup, so check the details in Google AI Studio. Treat the key like a password.</p>
+                </div>
+            </section>
+
+            <section class="space-y-2">
+                <h4 class="font-extrabold text-slate-900 text-sm">5. Using Tubby</h4>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Use the profile selector near the top to choose the person you are logging for.</li>
+                    <li>On <strong>Today</strong>, scan a meal or enter the details manually and check the estimated nutrition values.</li>
+                    <li>Use <strong>Fruit/Veg</strong> to review weekly servings and <strong>Weight</strong> to record weight progress.</li>
+                    <li>Use the <strong>Family</strong> tab to switch between profiles and manage people you track.</li>
+                </ul>
+            </section>
+
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Having trouble?</h4>
+                <p>Check that your email and password are correct. If a new login was created for an existing family, ask the Family Admin to approve it. If AI scanning fails, check the API key in Admin Settings and test it again. You can still add entries manually if the scanner is unavailable.</p>
+            </section>
         </div>
-        <button onclick="closeGuideModal()" class="w-full py-2.5 bg-slate-900 text-white font-extrabold text-xs rounded-xl">Close</button>
+        <button onclick="closeGuideModal()" class="w-full py-2.5 bg-slate-900 text-white font-extrabold text-xs rounded-xl">Close Guide</button>
     </div>
 </div>
 
