@@ -1273,7 +1273,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 const memorySnap = await getDocs(collection(db, "families", activeFamilyId, "nutritionMemory"));
                 const memories = memorySnap.docs.map(d => ({id:d.id,...d.data()}));
                 const searchText = (notes + " " + (document.getElementById("entryTitle").value || "")).toLowerCase();
-                const ranked = memories.map(m => { const tokens=String(m.title||"").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); return {...m,score:tokens.reduce((n,w)=>n+(searchText.includes(w)?1:0),0)}; }).sort((a,b)=>b.score-a.score).slice(0,20);
+                const ranked = memories.map(m => { const tokens=String(m.title||"").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); return {...m,score:tokens.reduce((n,w)=>n+(searchText.includes(w)?1:0),0)}; }).sort((a,b)=>b.score-a.score || Number(b.updatedAt||0)-Number(a.updatedAt||0)).slice(0,100);
                 window.tubbyKnownNutritionForPrompt = ranked.map(m => JSON.stringify({title:m.title,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat,fibre:m.fibre||0,salt:m.salt||0,fruitVegServings:m.fruitVeg||0,notes:m.notes||""})).join("\\n");
             }
         } catch(memoryErr) { console.warn("Could not load saved nutrition memory",memoryErr); }
@@ -1666,7 +1666,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 try {
                     const factor = ({All:1,Half:0.5,Tasted:0.1,Refused:0})[payload.portion] ?? 1;
                     const corrected = key => factor > 0 ? Number(payload[key] || 0) / factor : Number((payload.baseMacros || {})[key] || 0);
-                    const normName = v => String(v||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+                    const normName = v => String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
                     const memoryRef = collection(db, "families", activeFamilyId, "nutritionMemory");
                     const existingMemory = await getDocs(memoryRef);
                     const wanted = normName(memoryTitle);
