@@ -684,7 +684,8 @@
                     <li>Follow Google's prompts to create or select a project and create an API key. Keep the key private; do not post it publicly or send it to anyone you do not trust.</li>
                     <li>Sign in to Tubby as the Family Admin and open <strong>Admin Settings</strong> using the shield icon near the top of the app.</li>
                     <li>Paste the key into the <strong>Google Gemini API Key</strong> field, choose <strong>Test Key</strong> to check it, then save it.</li>
-                    <li>Try taking a food photo or uploading a nutrition label. Review the suggested values before saving your food entry.</li>
+                    <li>In the <strong>Family Country &amp; Date Format</strong> setting, choose the format used on your food packaging. This setting applies to the whole family; UK and international formats use day/month/year, while the US format uses month/day/year. Save the setting.</li>
+                    <li>Try taking a food photo or uploading a nutrition label. Review the suggested values before saving your food entry. For package dates, check the printed date and whether it is a use-by or best-before date; correct it manually if needed.</li>
                 </ol>
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
                     <p class="font-extrabold text-amber-900">Important about the API key</p>
@@ -707,7 +708,34 @@
                 <p>Check that your email and password are correct. If a new login was created for an existing family, ask the Family Admin to approve it. If AI scanning fails, check the API key in Admin Settings and test it again. You can still add entries manually if the scanner is unavailable.</p>
             </section>
         </div>
-        <div id="foodGuideContent" class="hidden space-y-3 text-xs text-slate-600 leading-relaxed"><div class="rounded-2xl bg-indigo-50 border border-indigo-200 p-3"><h4 class="font-extrabold text-indigo-900 text-sm">Family Food Manager</h4><p class="text-indigo-900 mt-1">Add food by typing a list, taking photos or scanning a receipt. Review AI results before saving.</p></div><section><h4 class="font-extrabold text-slate-900 text-sm">Add food</h4><p>Type items for AI to organise, photograph your stock, scan receipts or add items manually. Check names, quantities and dates before saving.</p></section><section><h4 class="font-extrabold text-slate-900 text-sm">Stock & meals</h4><p>Filter stock by storage area or items needing a check. Update quantities as food is used. Generate meal ideas using stock only or allowing inexpensive extras. Confirm stock changes after cooking.</p></section><section><h4 class="font-extrabold text-slate-900 text-sm">Shopping list</h4><p>Add items manually or from meal suggestions. When stock is marked finished, choose which items to add to the shared list.</p></section><p class="text-amber-800">AI estimates can be wrong. Verify package dates and quantities yourself.</p></div>
+        <div id="foodGuideContent" class="hidden space-y-3 text-xs text-slate-600 leading-relaxed">
+            <div class="rounded-2xl bg-indigo-50 border border-indigo-200 p-3">
+                <h4 class="font-extrabold text-indigo-900 text-sm">Family Food Manager</h4>
+                <p class="text-indigo-900 mt-1">Track shared household food stock, plan meals and maintain a shopping list. AI tools are optional; you can also add and update items manually.</p>
+            </div>
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Before using AI features</h4>
+                <p>AI food scanning, date reading and AI-assisted shopping or meal suggestions need the family's Gemini API key. The Family Admin manages this in <strong>Admin Settings</strong>; the saved key is shared through the family's settings, so it normally does not need entering separately on every device.</p>
+                <p>In Admin Settings, set <strong>Family Country &amp; Date Format</strong> to match the format on your food packaging. This setting applies to the family. UK and international formats use day/month/year; the US format uses month/day/year.</p>
+            </section>
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Add food and scan dates</h4>
+                <p>Use the Add area to enter items manually, type a list for AI to organise, photograph stock or scan a receipt. Review the item names and quantities before saving.</p>
+                <p>For a package date, scan the date label or enter the date yourself. Check the actual printed date, the year, and whether the label says <strong>use-by</strong> or <strong>best-before</strong>. Correct any suggestion that does not match the packaging. Do not rely on an unclear or inferred date without checking it.</p>
+            </section>
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Manage stock and plan meals</h4>
+                <p>Review stock and use the available filters to find items by storage area or items that need checking. Update quantities when food is used, and mark items finished when they run out.</p>
+                <p>Generate meal ideas using current stock, or allow inexpensive extras where that option is available. AI suggestions are ideas, not a guarantee that every ingredient or quantity is correct.</p>
+                <p>After cooking, review the proposed stock deductions and confirm only the items and amounts actually used. If quantities or units do not match, correct them or leave the deduction unconfirmed.</p>
+            </section>
+            <section class="space-y-1">
+                <h4 class="font-extrabold text-slate-900 text-sm">Shopping list</h4>
+                <p>Add items manually or from meal suggestions. When marking stock as finished, review the items offered for the shared shopping list. Use the shopping-list controls to organise items and archive ticked items after shopping.</p>
+            </section>
+            <p class="text-amber-800">AI results can be wrong. Check package labels, dates, quantities and stock changes yourself. You can still use manual entry if AI is unavailable.</p>
+        </div>
+        r allowing inexpensive extras. Confirm stock changes after cooking.</p></section><section><h4 class="font-extrabold text-slate-900 text-sm">Shopping list</h4><p>Add items manually or from meal suggestions. When stock is marked finished, choose which items to add to the shared list.</p></section><p class="text-amber-800">AI estimates can be wrong. Verify package dates and quantities yourself.</p></div>
         <button onclick="closeGuideModal()" class="w-full py-2.5 bg-slate-900 text-white font-extrabold text-xs rounded-xl">Close Guide</button>
     </div>
 </div>
