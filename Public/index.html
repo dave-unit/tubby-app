@@ -1071,9 +1071,9 @@
       document.getElementById('foodItemModal').classList.add('flex');
     };
     window.closeFoodItemModal=function(){const m=document.getElementById('foodItemModal');m.classList.add('hidden');m.classList.remove('flex');};
-    window.addFoodItem=function(){openFoodItemModal();};
-    window.editFoodItem=function(id){openFoodItemModal(id);};
-    window.updateFoodAmount=function(id){openFoodItemModal(id,true);};
+    window.addFoodItem=function(){window.openFoodItemModal();};
+    window.editFoodItem=function(id){window.openFoodItemModal(id);};
+    window.updateFoodAmount=function(id){window.openFoodItemModal(id,true);};
     window.finishFoodItem=window.updateFoodAmount;
     window.saveFoodItemForm=async function(event){
       event.preventDefault();if(!activeFamilyId)return showToast('Sign in first.');
@@ -1102,11 +1102,11 @@
         closeFoodItemModal();showToast(foodModalMode==='add'?'Added to family stock.':'Stock updated.');
       } catch(e){console.error(e);showToast('Could not save stock: '+(e.code||e.message||'permission error'));}
     };
-    window.openStockDeductionModal=function(candidates,title='Deduct ingredients from stock'){
+    window.openStockDeductionModal=function(candidates,title='Deduct ingredients from stock',suggestedIds=null){
       const modal=document.getElementById('stockDeductionModal'),list=document.getElementById('stockDeductionItems');
       document.getElementById('stockDeductionTitle').textContent=title;list.innerHTML='';
-      if(!candidates.length){showToast('No likely stock matches found. You can update stock in Food Manager.');return;}
-      candidates.forEach((item,i)=>{const row=document.createElement('div');row.className='rounded-xl border border-slate-200 p-3 space-y-2 bg-white';const label=document.createElement('label');label.className='flex gap-2 items-center text-sm font-bold';const check=document.createElement('input');check.type='checkbox';check.checked=true;check.dataset.index=i;const name=document.createElement('span');name.textContent=item.name+' (current: '+(item.quantity||'unknown')+')';label.append(check,name);const amount=document.createElement('input');amount.className='w-full border border-slate-200 rounded-xl p-2 text-sm';amount.placeholder='New remaining amount, or FINISHED';amount.value=item.quantity||'';amount.dataset.index=i;row.append(label,amount);list.append(row);});
+      if(!candidates.length){showToast('No stock items available to review.');return;}
+      candidates.forEach((item,i)=>{const row=document.createElement('div');row.className='rounded-xl border border-slate-200 p-3 space-y-2 bg-white';const label=document.createElement('label');label.className='flex gap-2 items-center text-sm font-bold';const check=document.createElement('input');check.type='checkbox';check.checked=suggestedIds?suggestedIds.includes(item.id):true;check.dataset.index=i;const name=document.createElement('span');name.textContent=item.name+' (current: '+(item.quantity||'unknown')+')';label.append(check,name);const amount=document.createElement('input');amount.className='w-full border border-slate-200 rounded-xl p-2 text-sm';amount.placeholder='New remaining amount, or FINISHED';amount.value=item.quantity||'';amount.dataset.index=i;row.append(label,amount);list.append(row);});
       window.stockDeductionPending=candidates;modal.classList.remove('hidden');modal.classList.add('flex');
     };
     window.closeStockDeductionModal=function(){const m=document.getElementById('stockDeductionModal');m.classList.add('hidden');m.classList.remove('flex');};
@@ -1640,7 +1640,7 @@
             if (!entryId && document.getElementById('deductStockAfterMeal')?.checked && foodInventory.length) {
                 const mealText=(payload.title+' '+payload.notes).toLowerCase();
                 const candidates=foodInventory.filter(x=>x.name&&(mealText.includes(x.name.toLowerCase())||x.name.toLowerCase().split(/\s+/).some(w=>w.length>3&&mealText.includes(w))));
-                openStockDeductionModal(candidates,'Update stock for '+(payload.title||'this meal'));
+                openStockDeductionModal(foodInventory,'Update stock for '+(payload.title||'this meal'),candidates.map(x=>x.id));
             }
         } catch (err) {
             showToast("Error saving entry: " + err.message);
