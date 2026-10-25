@@ -1363,6 +1363,18 @@
         const item = entries.find(e => e.id === id);
         if (!item) return;
 
+        // Reuse the saved full-portion baseline when available. For older entries,
+        // reconstruct it from the saved macros and selected portion where possible.
+        const portionFactors = { All: 1, Half: 0.5, Tasted: 0.1, Refused: 0 };
+        const savedFactor = portionFactors[item.portion || 'All'] ?? 1;
+        const macroKeys = ['calories', 'protein', 'carbs', 'fat', 'fruitVeg'];
+        window.tubbyBaseMacros = item.baseMacros && typeof item.baseMacros === 'object'
+            ? { ...item.baseMacros }
+            : Object.fromEntries(macroKeys.map(key => [
+                key,
+                savedFactor > 0 ? Number(item[key] || 0) / savedFactor : 0
+            ]));
+
         document.getElementById('entryId').value = item.id;
         document.getElementById('entryModalTitle').textContent = "Edit Entry";
         document.getElementById('entryMemberId').value = item.memberId;
@@ -1438,6 +1450,18 @@
         let portion = "All";
         document.getElementsByName('portion').forEach(r => { if (r.checked) portion = r.value; });
         payload.portion = portion;
+
+        // Preserve the original full-portion values so later edits can recalculate
+        // accurately without repeatedly scaling already-adjusted macros.
+        payload.baseMacros = window.tubbyBaseMacros
+            ? { ...window.tubbyBaseMacros }
+            : {
+                calories: payload.calories,
+                protein: payload.protein,
+                carbs: payload.carbs,
+                fat: payload.fat,
+                fruitVeg: payload.fruitVeg
+            };
 
         const entryId = document.getElementById('entryId').value;
         try {
