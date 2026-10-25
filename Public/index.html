@@ -766,6 +766,14 @@
     function setupFamilyListeners(familyId) {
         cleanupListeners();
 
+        // Keep the shared family API key in sync across already-open family devices.
+        const familyDocRef = doc(db, "families", familyId);
+        unsubs.push(onSnapshot(familyDocRef, (snapshot) => {
+            familyGeminiApiKey = snapshot.exists() ? (snapshot.data().geminiApiKey || '') : '';
+        }, (err) => {
+            console.error("Family settings listener failed:", err);
+        }));
+
         // Listen to Profiles
         const profRef = collection(db, "families", familyId, "profiles");
         unsubs.push(onSnapshot(profRef, (snapshot) => {
