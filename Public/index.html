@@ -110,6 +110,10 @@
                         <div id="dashFatText" class="text-xs font-black text-purple-400 mt-0.5">0 / 65g</div>
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-2 pt-2 text-center">
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Fibre</div><div id="dashFibreText" class="text-xs font-black text-amber-300 mt-0.5">0g today</div></div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Salt</div><div id="dashSaltText" class="text-xs font-black text-rose-300 mt-0.5">0g today</div></div>
+                </div>
             </div>
         </div>
 
@@ -1132,8 +1136,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         const todayStr = `${todayNow.getFullYear()}-${String(todayNow.getMonth() + 1).padStart(2, '0')}-${String(todayNow.getDate()).padStart(2, '0')}`;
         const todayEntries = entries.filter(e => e.memberId === member.id && e.timestamp.startsWith(todayStr));
 
-        let cals = 0, prot = 0, carbs = 0, fat = 0;
-        todayEntries.forEach(e => { cals += Number(e.calories||0); prot += Number(e.protein||0); carbs += Number(e.carbs||0); fat += Number(e.fat||0); });
+        let cals = 0, prot = 0, carbs = 0, fat = 0, fibre = 0, salt = 0;
+        todayEntries.forEach(e => { cals += Number(e.calories||0); prot += Number(e.protein||0); carbs += Number(e.carbs||0); fat += Number(e.fat||0); fibre += Number(e.fibre||0); salt += Number(e.salt||0); });
 
         const calTarget = member.calTarget || 2000;
                 document.getElementById('dashCalText').textContent = `${Number(cals.toFixed(1))} / ${calTarget} kcal`;
@@ -1141,6 +1145,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 document.getElementById('dashProtText').textContent = `${prot.toFixed(1)} / ${member.proteinTarget || 120}g`;
                 document.getElementById('dashCarbText').textContent = `${carbs.toFixed(1)} / ${member.carbsTarget || 200}g`;
                 document.getElementById('dashFatText').textContent = `${fat.toFixed(1)} / ${member.fatTarget || 65}g`;
+                document.getElementById('dashFibreText').textContent = `${fibre.toFixed(1)}g today`;
+                document.getElementById('dashSaltText').textContent = `${salt.toFixed(2)}g today`;
 
         renderTodayMealList(todayEntries, member);
 
@@ -1555,7 +1561,10 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         document.getElementById('entryProtein').value = item.protein || '';
         document.getElementById('entryCarbs').value = item.carbs || '';
         document.getElementById('entryFat').value = item.fat || '';
+        document.getElementById('entryFibre').value = item.fibre || '';
+        document.getElementById('entrySalt').value = item.salt || '';
         document.getElementById('entryFruitVeg').value = item.fruitVeg || '';
+        window.tubbyBaseMacros = item.baseMacros || {calories:Number(item.calories||0),protein:Number(item.protein||0),carbs:Number(item.carbs||0),fat:Number(item.fat||0),fibre:Number(item.fibre||0),salt:Number(item.salt||0),fruitVeg:Number(item.fruitVeg||0)};
         document.getElementById('entryNotes').value = item.notes || '';
         document.getElementById('hasReaction').checked = item.hasReaction || false;
         
