@@ -28,7 +28,19 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+    /* Opaque cap above sticky modal headers hides content scrolling underneath the top padding. */
+.modal-sticky-header { position: sticky; }
+.modal-sticky-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 1.5rem;
+    background: #fff;
+    pointer-events: none;
+}
+</style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased pb-24 min-h-screen">
 
@@ -298,7 +310,7 @@
 <!-- MODAL 2: LOG / EDIT FOOD ENTRY -->
 <div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar space-y-4">
-        <div class="sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
+        <div class="modal-sticky-header sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
             <h3 class="font-extrabold text-slate-900 text-base" id="entryModalTitle">Log Food Entry</h3>
             <button onclick="closeEntryModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -555,7 +567,7 @@
 <!-- MODAL 4: ADMIN SETTINGS -->
 <div id="adminModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-stretch justify-center p-0 hidden overflow-y-auto">
     <div class="bg-white rounded-none sm:rounded-3xl max-w-2xl w-full min-h-full max-h-screen p-4 sm:p-6 shadow-2xl space-y-4 overflow-y-auto overscroll-contain" style="-webkit-overflow-scrolling: touch;">
-        <div class="sticky top-0 z-10 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1">
+        <div class="modal-sticky-header sticky top-0 z-10 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1">
             <h3 class="font-extrabold text-purple-900 text-base flex items-center gap-2"><i class="fa-solid fa-shield-halved text-purple-600"></i> Admin Console</h3>
             <button onclick="closeAdminModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
         </div>
