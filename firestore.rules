@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function familyPath(familyId) {
+      return /databases/$(database)/documents/families/$(familyId);
+    }
+
+    function hasUser(uid) {
+      return exists(userPath(uid));
+    }
+
+    function belongsToFamily(familyId) {
+      return signedIn()
+        && hasUser(request.auth.uid)
+        && get(userPath(request.auth.uid)).data.familyId == familyId;
+    }
+
+    function isFamilyAdmin(familyId) {
+      return belongsToFamily(familyId)
+        && get(userPath(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isFamilyAdminAfter(familyId) {
+      return signedIn()
+        && getAfter(userPath(request.auth.uid)).data.familyId == familyId
+        && getAfter(userPath(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // User account records
+    match /users/{userId} {
+      allow read: if signedIn()
+        && (
+          request.auth.uid == userId
+          || isFamilyAdmin(resource.data.familyId)
+        );
+
+      // First Admin must be created atomically with the family document.
+      // Later users can join an existing family as non-admins.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.familyId is string
+        && (
+          (
+            request.resource.data.isAdmin == true
+            && !exists(familyPath(request.resource.data.familyId))
+            && getAfter(familyPath(request.resource.data.familyId)).data.createdBy == userId
+          )
+          ||
+          (
+            request.resource.data.isAdmin == false
+            && exists(familyPath(request.resource.data.familyId))
+          )
+        );
+
+      // Users cannot grant themselves Admin privileges or change families.
+      // A family Admin can link a pending account to a profile.
+      allow update: if signedIn()
+        && request.resource.data.familyId == resource.data.familyId
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && (
+          request.auth.uid == userId
+          || isFamilyAdmin(resource.data.familyId)
+        );
+
+      allow delete: if false;
+    }
+
+    match /families/{familyId} {
+      // Family document contains setup metadata only.
+      // Signed-in users need to check whether a family already exists.
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && !exists(familyPath(familyId))
+        && request.resource.data.createdBy == request.auth.uid
+        && getAfter(userPath(request.auth.uid)).data.familyId == familyId
+        && getAfter(userPath(request.auth.uid)).data.isAdmin == true;
+
+      allow update, delete: if isFamilyAdmin(familyId);
+
+      match /profiles/{profileId} {
+        allow read: if belongsToFamily(familyId);
+
+        allow create: if isFamilyAdmin(familyId)
+          || isFamilyAdminAfter(familyId);
+
+        allow update: if isFamilyAdmin(familyId)
+          || (
+            belongsToFamily(familyId)
+            && get(userPath(request.auth.uid)).data.profileId == profileId
+            && resource.data.role != 'Child'
+            && request.resource.data.role == resource.data.role
+          );
+
+        allow delete: if isFamilyAdmin(familyId);
+      }
+
+      match /entries/{entryId} {
+        allow read, write: if belongsToFamily(familyId);
+      }
+
+      match /weights/{weightId} {
+        allow read, write: if belongsToFamily(familyId);
+      }
+
+      match /foodInventory/{itemId} {
+        // Shared food stock is visible and editable by authenticated family members.
+        allow read, create, update, delete: if belongsToFamily(familyId);
+      }
+
+      match /shoppingList/{itemId} {
+        // Shared shopping list is visible and editable by authenticated family members.
+        allow read, create, update, delete: if belongsToFamily(familyId);
+      }
+
+      match /pendingUsers/{userId} {
+        allow read: if isFamilyAdmin(familyId)
+          || (signedIn() && request.auth.uid == userId);
+
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && getAfter(userPath(userId)).data.familyId == familyId
+          && getAfter(userPath(userId)).data.isAdmin == false;
+
+        allow update, delete: if isFamilyAdmin(familyId);
+      }
+    }
+  }
+}
