@@ -1042,6 +1042,8 @@
       document.getElementById('foodItemAmountLabel').textContent=amountOnly?'New remaining amount (type FINISHED to remove)': 'Remaining amount / volume';
       document.getElementById('foodItemName').value=x.name||'';document.getElementById('foodItemName').required=!amountOnly;
       document.getElementById('foodItemAmount').value=x.quantity||'';
+      ['foodItemName','foodItemAmount','foodItemStorage','foodItemDateType','foodItemDate','foodItemPack','foodItemFill'].forEach(id=>document.getElementById(id)?.classList.remove('border-amber-400','bg-amber-50','ring-1','ring-amber-300'));
+      if(id&&!amountOnly){if(!x.name)document.getElementById('foodItemName').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!x.quantity)document.getElementById('foodItemAmount').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!x.storage)document.getElementById('foodItemStorage').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(!(x.useBy||x.bestBefore))document.getElementById('foodItemDate').classList.add('border-amber-400','bg-amber-50','ring-1','ring-amber-300');if(x.needsReview&&x.uncertainty)showToast('Needs checking: '+x.uncertainty);}
       document.getElementById('foodItemStorage').value=x.storage||'Pantry';
       document.getElementById('foodItemDateType').value=x.useBy?'Use-by':'Best-before';
       document.getElementById('foodItemDate').value=x.useBy||x.bestBefore||'';
