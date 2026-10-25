@@ -1222,6 +1222,10 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     document.getElementsByName('portion').forEach(r => {
         r.addEventListener('change', applyPortionToMacros);
     });
+    window.tubbyNutritionManuallyEdited = false;
+    ['entryCalories','entryProtein','entryCarbs','entryFat','entryFibre','entrySalt','entryFruitVeg'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => { window.tubbyNutritionManuallyEdited = true; });
+    });
 
     // GEMINI FOOD ESTIMATION: accepts a photo, written notes, or both.
     window.estimateNutritionFromDetails = async function() {
@@ -1517,6 +1521,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     }
 
     window.openNewEntryModal = function() {
+        window.tubbyNutritionManuallyEdited = false;
         window.tubbyBaseMacros = null;
         document.getElementById('entryId').value = '';
         document.getElementById('entryModalTitle').textContent = "Log Food / Nutrition Label";
@@ -1654,20 +1659,24 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 await setDoc(doc(collection(db, "families", activeFamilyId, "entries")), payload);
             }
             // Remember the final nutrition the user sees (including manual corrections).
+            let nutritionRemembered = false;
             const memoryTitle = String(payload.title || "").trim();
-            if (memoryTitle && activeFamilyId) {
-                const factor = ({All:1,Half:0.5,Tasted:0.1,Refused:0})[payload.portion] ?? 1;
-                const corrected = key => factor > 0 ? Number(payload[key] || 0) / factor : Number((payload.baseMacros || {})[key] || 0);
-                const normName = v => String(v||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
-                const memoryRef = collection(db, "families", activeFamilyId, "nutritionMemory");
-                const existingMemory = await getDocs(memoryRef);
-                const wanted = normName(memoryTitle);
-                const matched = existingMemory.docs.find(d => normName(d.data().title) === wanted);
-                const memoryPayload = {title:memoryTitle,calories:corrected("calories"),protein:corrected("protein"),carbs:corrected("carbs"),fat:corrected("fat"),fibre:corrected("fibre"),salt:corrected("salt"),fruitVeg:corrected("fruitVeg"),notes:payload.notes||"",updatedAt:Date.now(),correctedByUser:true};
-                await setDoc(matched ? doc(db,"families",activeFamilyId,"nutritionMemory",matched.id) : doc(memoryRef), memoryPayload, {merge:true});
+            if (memoryTitle && activeFamilyId && window.tubbyNutritionManuallyEdited) {
+                try {
+                    const factor = ({All:1,Half:0.5,Tasted:0.1,Refused:0})[payload.portion] ?? 1;
+                    const corrected = key => factor > 0 ? Number(payload[key] || 0) / factor : Number((payload.baseMacros || {})[key] || 0);
+                    const normName = v => String(v||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+                    const memoryRef = collection(db, "families", activeFamilyId, "nutritionMemory");
+                    const existingMemory = await getDocs(memoryRef);
+                    const wanted = normName(memoryTitle);
+                    const matched = existingMemory.docs.find(d => normName(d.data().title) === wanted);
+                    const memoryPayload = {title:memoryTitle,calories:corrected("calories"),protein:corrected("protein"),carbs:corrected("carbs"),fat:corrected("fat"),fibre:corrected("fibre"),salt:corrected("salt"),fruitVeg:corrected("fruitVeg"),notes:payload.notes||"",updatedAt:Date.now(),correctedByUser:true};
+                    await setDoc(matched ? doc(db,"families",activeFamilyId,"nutritionMemory",matched.id) : doc(memoryRef), memoryPayload, {merge:true});
+                    nutritionRemembered = true;
+                } catch(memoryError) { console.warn("Could not save nutrition memory",memoryError); }
             }
             closeEntryModal();
-            showToast("Entry saved and nutrition remembered!");
+            showToast(nutritionRemembered ? "Entry saved and corrected nutrition remembered!" : "Entry saved!");
             // Stock deduction is optional and handled in an in-app review panel.
             if (!entryId && document.getElementById('deductStockAfterMeal')?.checked && foodInventory.length) {
                 const mealText=(payload.title+' '+payload.notes).toLowerCase();
