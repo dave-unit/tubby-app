@@ -106,21 +106,14 @@
             </div>
         </div>
 
-        <!-- PHOTO & UPLOAD BANNER -->
-        <div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-md space-y-3">
-            <div class="space-y-0.5">
-                <h3 class="font-extrabold text-sm">AI Food & Label Scanner</h3>
-                <p class="text-xs text-emerald-100">Snap meals or upload packaging/nutrition labels</p>
+        <!-- LOG ENTRY ACTION -->
+        <button onclick="openNewEntryModal()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-md text-left flex items-center justify-between gap-3 active:scale-[0.99] transition-transform">
+            <div>
+                <h3 class="font-extrabold text-sm"><i class="fa-solid fa-pen-to-square mr-1.5"></i> Log Food</h3>
+                <p class="text-xs text-emerald-100 mt-1">Add notes, take a photo, upload an image, or combine them</p>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="triggerPhotoSnap()" class="py-2.5 bg-white text-emerald-800 rounded-xl font-extrabold text-xs shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-camera"></i> Take Photo
-                </button>
-                <button onclick="triggerFileUpload()" class="py-2.5 bg-emerald-700/80 hover:bg-emerald-700 text-white border border-white/20 rounded-xl font-extrabold text-xs shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-1.5 backdrop-blur-xs">
-                    <i class="fa-solid fa-upload"></i> Upload Image
-                </button>
-            </div>
-        </div>
+            <i class="fa-solid fa-chevron-right text-white/80"></i>
+        </button>
 
         <div class="flex items-center justify-between pt-2">
             <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2"><i class="fa-solid fa-utensils text-brand-600"></i> Today's Food Log</h3>
@@ -746,7 +739,6 @@
             // to trusted family accounts on their own devices.
             const familyDocSnap = await getDoc(doc(db, "families", activeFamilyId));
             familyGeminiApiKey = familyDocSnap.exists() ? (familyDocSnap.data().geminiApiKey || '') : '';
-            if (familyGeminiApiKey) localStorage.setItem('tubby_gemini_key', familyGeminiApiKey);
 
             if (!currentUserProfileId && !isAdminLoggedIn) {
                 document.getElementById('authModal').classList.remove('hidden');
@@ -1094,7 +1086,7 @@
         await window.runGeminiVisionScan(currentPhotoBase64, notes);
     }
     window.runGeminiVisionScan = async function(base64Image = null, notesOverride = null) {
-        const apiKey = familyGeminiApiKey || localStorage.getItem('tubby_gemini_key') || '';
+        const apiKey = familyGeminiApiKey || '';
         const statusBox = document.getElementById('aiStatusBox');
         const statusHeader = document.getElementById('aiStatusHeader');
         const statusBody = document.getElementById('aiStatusBody');
@@ -1198,8 +1190,7 @@
             if (!response.ok) throw new Error("HTTP error " + response.status);
             statusDiv.className = "text-[11px] font-bold p-2 rounded-xl mt-1 bg-emerald-50 text-emerald-800 border border-emerald-200";
             statusDiv.textContent = "✅ API Key is valid and working successfully!";
-            localStorage.setItem('tubby_gemini_key', key);
-            showToast("API Key verified!");
+            showToast("API key works. Tap Save Key to share it with your family.");
         } catch (err) {
             statusDiv.className = "text-[11px] font-bold p-2 rounded-xl mt-1 bg-rose-50 text-rose-700 border border-rose-200";
             statusDiv.textContent = `❌ Test Failed: ${err.message}`;
@@ -1342,10 +1333,12 @@
         const file = input.files[0];
         input.value = '';
         try {
+            const entryModalWasOpen = !document.getElementById('entryModal').classList.contains('hidden');
             currentPhotoBase64 = await compressImageFile(file, { maxDimension: 1280, maxBytes: 450 * 1024, quality: 0.78 });
-            openNewEntryModal();
+            if (!entryModalWasOpen) openNewEntryModal();
             setPhotoPreview(currentPhotoBase64);
-            runGeminiVisionScan(currentPhotoBase64);
+            const notes = document.getElementById('entryNotes').value.trim();
+            runGeminiVisionScan(currentPhotoBase64, notes);
         } catch (err) {
             showToast(err.message || "Could not prepare this image. Please try another photo.");
         }
@@ -1780,7 +1773,7 @@
     }
 
     window.openAdminModal = function() {
-        document.getElementById('adminApiKeyInput').value = familyGeminiApiKey || localStorage.getItem('tubby_gemini_key') || '';
+        document.getElementById('adminApiKeyInput').value = familyGeminiApiKey || '';
         document.getElementById('apiTestStatus').classList.add('hidden');
         renderAdminProfilesList();
         renderAdminPendingList();
@@ -1796,17 +1789,15 @@
             return;
         }
         try {
-            await updateDoc(doc(db, "families", activeFamilyId), {
-                geminiApiKey: key
-            });
-            familyGeminiApiKey = key;
-            if (key) {
-                localStorage.setItem('tubby_gemini_key', key);
-                showToast("API key saved for this family!");
-            } else {
-                localStorage.removeItem('tubby_gemini_key');
-                showToast("Family API key removed.");
-            }
+            // Use merge-set rather than updateDoc: the family document may not
+            // exist yet when a family has only subcollection records.
+            const familyRef = doc(db, "families", activeFamilyId);
+            await setDoc(familyRef, { geminiApiKey: key, updatedAt: Date.now() }, { merge: true });
+            const savedFamilySnap = await getDoc(familyRef);
+            const savedKey = savedFamilySnap.exists() ? (savedFamilySnap.data().geminiApiKey || '') : '';
+            if (savedKey !== key) throw new Error("The saved key could not be verified in the family document.");
+            familyGeminiApiKey = savedKey;
+            showToast(key ? "API key saved for this family!" : "Family API key removed.");
             closeAdminModal();
         } catch (err) {
             showToast("Could not save family API key: " + (err?.message || "Please try again."));
