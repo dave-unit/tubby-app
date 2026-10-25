@@ -1257,7 +1257,17 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         statusHeader.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-600"></i> Requesting Gemini AI...`;
         statusBody.textContent = "Estimating nutrition from " + (base64Image && notes ? "your photo and notes..." : base64Image ? "your photo..." : "your description...");
 
-        const promptText = `Estimate the nutrition for the food or meal shown in the image and/or described in the notes. Treat the notes as important context about ingredients, cooking method, sauces, drinks, and portion size. If a quantity is not specified, make a reasonable typical-portion estimate. Return strictly a raw JSON object with no markdown, using numeric values for calories, protein, carbs, fat and fruitVegServings. Use this schema: {"title":"Food or meal name","category":"Breakfast|Lunch|Dinner|Snack","calories":400,"protein":25,"carbs":35,"fat":12,"fruitVegServings":1.5}. Estimate the whole described/shown portion before the app applies the selected eaten amount. If the image is a nutrition label, use the visible label values and serving size where possible. Notes: ${notes || "No additional notes provided."}`;
+        window.tubbyKnownNutritionForPrompt = "";
+        try {
+            if (activeFamilyId) {
+                const memorySnap = await getDocs(collection(db, "families", activeFamilyId, "nutritionMemory"));
+                const memories = memorySnap.docs.map(d => ({id:d.id,...d.data()}));
+                const searchText = (notes + " " + (document.getElementById("entryTitle").value || "")).toLowerCase();
+                const ranked = memories.map(m => { const tokens=String(m.title||"").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); return {...m,score:tokens.reduce((n,w)=>n+(searchText.includes(w)?1:0),0)}; }).sort((a,b)=>b.score-a.score).slice(0,20);
+                window.tubbyKnownNutritionForPrompt = ranked.map(m => JSON.stringify({title:m.title,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat,fibre:m.fibre||0,salt:m.salt||0,fruitVegServings:m.fruitVeg||0,notes:m.notes||""})).join("\\n");
+            }
+        } catch(memoryErr) { console.warn("Could not load saved nutrition memory",memoryErr); }
+        const promptText = `Estimate the nutrition for the food or meal shown in the image and/or described in the notes. Treat the notes as important context about ingredients, cooking method, sauces, drinks, and portion size. If a quantity is not specified, make a reasonable typical-portion estimate. Return strictly a raw JSON object with no markdown, using numeric values for calories, protein, carbs, fat, fibre, salt and fruitVegServings. Use this schema: {"title":"Food or meal name including brand/product when visible","category":"Breakfast|Lunch|Dinner|Snack","calories":400,"protein":25,"carbs":35,"fat":12,"fibre":4,"salt":0.3,"fruitVegServings":1.5}. PRIORITY: first compare the photo/notes with the previously saved family food items below. If this is the same product, use its saved manually corrected nutrition values exactly (unless the pictured label clearly shows a different serving size); do not replace them with internet/general estimates. If no saved match exists and a nutrition label is visible, transcribe the label values for its stated serving size accurately; prefer label data over estimates and never inflate values. Only estimate when no reliable label or saved match exists. Estimate the whole described/shown portion before the app applies the selected eaten amount. Previously saved family items: ${window.tubbyKnownNutritionForPrompt || "None yet."}. Notes: ${notes || "No additional notes provided."}`;
         const parts = [{ text: promptText }];
         if (base64Image) {
             const cleanBase64 = base64Image.split(',')[1] || base64Image;
@@ -1291,6 +1301,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                     protein: Number(parsedJson.protein || 0),
                     carbs: Number(parsedJson.carbs || 0),
                     fat: Number(parsedJson.fat || 0),
+                    fibre: Number(parsedJson.fibre || 0),
+                    salt: Number(parsedJson.salt || 0),
                     fruitVeg: Number(parsedJson.fruitVegServings || 0)
                 };
                 applyPortionToMacros();
@@ -1598,6 +1610,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
             protein: Number(document.getElementById('entryProtein').value || 0),
             carbs: Number(document.getElementById('entryCarbs').value || 0),
             fat: Number(document.getElementById('entryFat').value || 0),
+            fibre: Number(document.getElementById('entryFibre').value || 0),
+            salt: Number(document.getElementById('entrySalt').value || 0),
             fruitVeg: Number(document.getElementById('entryFruitVeg').value || 0),
             hasReaction: document.getElementById('hasReaction').checked,
             notes: document.getElementById('entryNotes').value,
@@ -1618,6 +1632,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 protein: payload.protein,
                 carbs: payload.carbs,
                 fat: payload.fat,
+                fibre: payload.fibre,
+                salt: payload.salt,
                 fruitVeg: payload.fruitVeg
             };
 
