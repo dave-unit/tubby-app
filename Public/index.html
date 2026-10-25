@@ -321,8 +321,12 @@
         </div>
 
         <div id="nutritionBreakdown" class="hidden rounded-2xl border border-purple-200 bg-purple-50/60 p-3 space-y-2">
-            <div class="flex items-start justify-between gap-2"><div><h4 class="text-xs font-black text-purple-950">Meal breakdown</h4><p class="text-[10px] text-purple-800">Review each component. Edit portions or nutrition values to recalculate the meal total.</p></div><button type="button" onclick="addNutritionComponent()" class="shrink-0 rounded-lg bg-white border border-purple-200 px-2 py-1 text-[10px] font-bold text-purple-900">+ Add item</button></div>
-            <div id="nutritionBreakdownRows" class="space-y-2"></div><div class="flex justify-between border-t border-purple-200 pt-2 text-xs font-black text-purple-950"><span>Breakdown total</span><span id="nutritionBreakdownTotal">0 kcal</span></div>
+            <button type="button" id="nutritionBreakdownToggle" onclick="toggleNutritionBreakdown()" aria-expanded="false" class="w-full flex items-center justify-between gap-2 text-left"><span><span class="block text-xs font-black text-purple-950">Adjust meal components</span><span class="block text-[10px] text-purple-800">Optional: edit portions or record what was actually eaten</span></span><span id="nutritionBreakdownChevron" class="text-purple-800 text-sm">＋</span></button>
+            <div id="nutritionBreakdownDetails" class="hidden space-y-2">
+                <div class="flex justify-end"><button type="button" onclick="addNutritionComponent()" class="rounded-lg bg-white border border-purple-200 px-2 py-1 text-[10px] font-bold text-purple-900">+ Add item</button></div>
+                <div id="nutritionBreakdownRows" class="space-y-2"></div>
+                <div class="flex justify-between border-t border-purple-200 pt-2 text-xs font-black text-purple-950"><span>Meal total (adjusted for eaten amounts)</span><span id="nutritionBreakdownTotal">0 kcal</span></div>
+            </div>
         </div>
         <div id="aiPreviewCard" class="hidden bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs text-emerald-900 font-medium">
             <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 mr-1"></i>
@@ -1256,33 +1260,50 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     });
 
     window.tubbyNutritionComponents = [];
+    window.toggleNutritionBreakdown = function() {
+        const details=document.getElementById('nutritionBreakdownDetails'), button=document.getElementById('nutritionBreakdownToggle');
+        if(!details||!button)return; const open=details.classList.toggle('hidden')===false;
+        button.setAttribute('aria-expanded',String(open));const icon=document.getElementById('nutritionBreakdownChevron');if(icon)icon.textContent=open?'−':'＋';
+    };
     window.renderNutritionBreakdown = function() {
         const box=document.getElementById('nutritionBreakdown'), rows=document.getElementById('nutritionBreakdownRows');
         if(!box||!rows)return; rows.replaceChildren();
         if(!Array.isArray(window.tubbyNutritionComponents)||!window.tubbyNutritionComponents.length){box.classList.add('hidden');return;}
         box.classList.remove('hidden');
         window.tubbyNutritionComponents.forEach((item,index)=>{
-            const row=document.createElement('div');row.className='rounded-xl border border-purple-100 bg-white p-2 space-y-1.5';
-            const top=document.createElement('div');top.className='flex gap-1.5 items-center';
-            const name=document.createElement('input');name.value=item.name||'';name.placeholder='Food item';name.className='min-w-0 flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold';name.setAttribute('aria-label','Component name');name.addEventListener('input',()=>{item.name=name.value;});
-            const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.className='w-7 h-7 rounded-lg bg-rose-50 text-rose-700 font-black';remove.title='Remove item';remove.onclick=()=>{window.tubbyNutritionComponents.splice(index,1);window.renderNutritionBreakdown();window.recalculateNutritionFromComponents(false);};
-            top.append(name,remove);
-            const portion=document.createElement('input');portion.value=item.portion||'';portion.placeholder='Portion / amount';portion.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-[11px]';portion.setAttribute('aria-label','Estimated portion');portion.addEventListener('input',()=>{item.portion=portion.value;});
+            const row=document.createElement('details');row.className='rounded-xl border border-purple-100 bg-white p-2';
+            const summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-xs font-bold text-slate-800';
+            const title=document.createElement('span');title.className='min-w-0 flex-1';title.textContent=item.name||'Food item';
+            const cal=document.createElement('span');cal.className='shrink-0 text-purple-800';cal.textContent=Math.round(Number(item.calories||0)*Number(item.eatenFraction??1))+' kcal';
+            summary.append(title,cal);row.append(summary);
+            const editor=document.createElement('div');editor.className='pt-2 mt-2 border-t border-slate-100 space-y-2';
+            const top=document.createElement('div');top.className='grid grid-cols-2 gap-2';
+            const nameWrap=document.createElement('label');nameWrap.className='text-[10px] font-bold text-slate-500';nameWrap.textContent='Component';
+            const name=document.createElement('input');name.value=item.name||'';name.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs';name.addEventListener('input',()=>{item.name=name.value;title.textContent=name.value;});nameWrap.append(name);
+            const portionWrap=document.createElement('label');portionWrap.className='text-[10px] font-bold text-slate-500';portionWrap.textContent='Portion size / units';
+            const portion=document.createElement('input');portion.value=item.portion||'';portion.placeholder='e.g. 200 g, 2 pieces';portion.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs';portion.addEventListener('change',()=>{const parsed=String(portion.value).match(/^\s*(\d+(?:\.\d+)?)\s*(g|grams?|ml|millilitres?|milliliters?)\s*$/i);if(parsed){const amount=Number(parsed[1]);if(item.amount>0&&item.calories>=0)item.calories=Math.max(0,item.calories*amount/item.amount);item.amount=amount;item.unit=/^g|gram/i.test(parsed[2])?'g':'ml';}item.portion=portion.value;window.renderNutritionBreakdown();});portionWrap.append(portion);
+            top.append(nameWrap,portionWrap);editor.append(top);
+            const quantityLine=document.createElement('div');quantityLine.className='grid grid-cols-2 gap-2';
+            const amountWrap=document.createElement('label');amountWrap.className='text-[10px] font-bold text-slate-500';amountWrap.textContent='Amount';
+            const amountInput=document.createElement('input');amountInput.type='number';amountInput.min='0';amountInput.step='any';amountInput.value=item.amount??'';amountInput.placeholder='Quantity';amountInput.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs';amountInput.addEventListener('change',()=>{const next=Math.max(0,Number(amountInput.value||0));if(item.amount>0)item.calories=item.calories*next/item.amount;item.amount=next;item.portion=next?(next+' '+(item.unit||'g')):'';window.renderNutritionBreakdown();window.recalculateNutritionFromComponents();});amountWrap.append(amountInput);
+            const unitWrap=document.createElement('label');unitWrap.className='text-[10px] font-bold text-slate-500';unitWrap.textContent='Unit';
+            const unit=document.createElement('select');unit.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs';[['g','grams (g)'],['ml','millilitres (ml)'],['piece','pieces / quantity']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;unit.append(o);});unit.value=item.unit||'piece';unit.addEventListener('change',()=>{item.unit=unit.value;item.portion=item.amount?(item.amount+' '+item.unit):item.portion;portion.value=item.portion;});unitWrap.append(unit);
+            quantityLine.append(amountWrap,unitWrap);editor.append(quantityLine);
             const fields=document.createElement('div');fields.className='grid grid-cols-3 gap-1.5';
-            [['calories','kcal'],['protein','Protein g'],['carbs','Carbs g'],['fat','Fat g'],['fibre','Fibre g'],['salt','Salt g'],['fruitVegServings','Fruit/veg']];
-            [['calories','kcal',1],['protein','Protein g',0.1],['carbs','Carbs g',0.1],['fat','Fat g',0.1],['fibre','Fibre g',0.1],['salt','Salt g',0.01],['fruitVegServings','Fruit/veg',0.1]].forEach(([key,label,step])=>{
+            [['calories','Calories (kcal)',1],['protein','Protein (g)',0.1],['carbs','Carbs (g)',0.1],['fat','Fat (g)',0.1],['fibre','Fibre (g)',0.1],['salt','Salt (g)',0.01]].forEach(([key,label,step])=>{
                 const wrap=document.createElement('label');wrap.className='text-[9px] font-bold text-slate-500';wrap.textContent=label;
-                const input=document.createElement('input');input.type='number';input.min='0';input.step=String(step);input.value=Number(item[key]||0);input.className='w-full px-1.5 py-1 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800';input.setAttribute('aria-label',label);
-                input.addEventListener('input',()=>{item[key]=Math.max(0,Number(input.value||0));window.recalculateNutritionFromComponents(false);});
-                wrap.append(input);fields.append(wrap);
-            });
-            row.append(top,portion,fields);rows.append(row);
+                const input=document.createElement('input');input.type='number';input.min='0';input.step=String(step);input.value=Number(item[key]||0);input.className='w-full px-1.5 py-1 border border-slate-200 rounded-lg text-[11px] font-semibold';input.addEventListener('change',()=>{item[key]=Math.max(0,Number(input.value||0));if(key==='calories'&&item.amount>0)item.caloriesPerUnit=item.calories/item.amount;window.recalculateNutritionFromComponents();summary.querySelector('span:last-child').textContent=Math.round(item.calories*Number(item.eatenFraction??1))+' kcal';});wrap.append(input);fields.append(wrap);
+            });editor.append(fields);
+            const eatenWrap=document.createElement('label');eatenWrap.className='block text-[10px] font-bold text-slate-500';eatenWrap.textContent='How much was eaten?';
+            const eaten=document.createElement('select');eaten.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs';[['1','All'],['0.75','About ¾'],['0.5','About half'],['0.25','About ¼'],['0','None']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;eaten.append(o);});eaten.value=String(item.eatenFraction??1);eaten.addEventListener('change',()=>{item.eatenFraction=Number(eaten.value);cal.textContent=Math.round(item.calories*item.eatenFraction)+' kcal';window.recalculateNutritionFromComponents();});eatenWrap.append(eaten);
+            const remove=document.createElement('button');remove.type='button';remove.textContent='Remove component';remove.className='text-[10px] font-bold text-rose-700';remove.onclick=()=>{window.tubbyNutritionComponents.splice(index,1);window.renderNutritionBreakdown();window.recalculateNutritionFromComponents();};
+            editor.append(eatenWrap,remove);row.append(editor);rows.append(row);
         });
-        window.recalculateNutritionFromComponents(false);
+        window.recalculateNutritionFromComponents();
     };
     window.recalculateNutritionFromComponents = function() {
         const totals={calories:0,protein:0,carbs:0,fat:0,fibre:0,salt:0,fruitVeg:0};
-        (window.tubbyNutritionComponents||[]).forEach(c=>{['calories','protein','carbs','fat','fibre','salt'].forEach(k=>totals[k]+=Number(c[k]||0));totals.fruitVeg+=Number(c.fruitVegServings||0);});
+        (window.tubbyNutritionComponents||[]).forEach(c=>{const f=Number(c.eatenFraction??1);['calories','protein','carbs','fat','fibre','salt'].forEach(k=>totals[k]+=Number(c[k]||0)*f);totals.fruitVeg+=Number(c.fruitVegServings||0)*f;});
         const totalEl=document.getElementById('nutritionBreakdownTotal');if(totalEl)totalEl.textContent=Math.round(totals.calories)+' kcal';
         if(!window.tubbyNutritionComponents?.length)return;
         window.tubbyBaseMacros=totals;
@@ -1291,7 +1312,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         window.tubbyNutritionManuallyEdited=true;applyPortionToMacros();
     };
     window.addNutritionComponent = function() {
-        window.tubbyNutritionComponents.push({name:'Additional item',portion:'',calories:0,protein:0,carbs:0,fat:0,fibre:0,salt:0,fruitVegServings:0});window.renderNutritionBreakdown();
+        window.tubbyNutritionComponents.push({name:'Additional item',portion:'',amount:0,unit:'g',calories:0,protein:0,carbs:0,fat:0,fibre:0,salt:0,fruitVegServings:0,eatenFraction:1});window.renderNutritionBreakdown();
+        const rows=document.getElementById('nutritionBreakdownRows');if(rows?.lastElementChild)rows.lastElementChild.open=true;
     };
 
     // GEMINI FOOD ESTIMATION: accepts a photo, written notes, or both.
@@ -1383,7 +1405,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                     fruitVeg: Number(parsedJson.fruitVegServings || 0)
                 };
                 applyPortionToMacros();
-                window.tubbyNutritionComponents = Array.isArray(parsedJson.components) ? parsedJson.components.map(c=>({name:String(c.name||'Food item'),portion:String(c.portion||''),calories:Number(c.calories||0),protein:Number(c.protein||0),carbs:Number(c.carbs||0),fat:Number(c.fat||0),fibre:Number(c.fibre||0),salt:Number(c.salt||0),fruitVegServings:Number(c.fruitVegServings||0)})) : [];
+                window.tubbyNutritionComponents = Array.isArray(parsedJson.components) ? parsedJson.components.map(c=>{const m=String(c.portion||'').match(/^(\\d+(?:\\.\\d+)?)\\s*(g|grams?|ml|millilitres?|milliliters?)$/i);return {name:String(c.name||'Food item'),portion:String(c.portion||''),amount:m?Number(m[1]):0,unit:m?(/^g|gram/i.test(m[2])?'g':'ml'):'piece',calories:Number(c.calories||0),protein:Number(c.protein||0),carbs:Number(c.carbs||0),fat:Number(c.fat||0),fibre:Number(c.fibre||0),salt:Number(c.salt||0),fruitVegServings:Number(c.fruitVegServings||0),eatenFraction:1};}) : [];
                 if(window.tubbyNutritionComponents.length) window.renderNutritionBreakdown(); else document.getElementById('nutritionBreakdown')?.classList.add('hidden');
 
 
