@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tubby - Family Diet Tracker</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🥑%3C/text%3E%3C/svg%3E">
     <!-- PWA Manifest & Theme -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#22c55e">
@@ -57,7 +58,7 @@
 </header>
 
 <!-- FAMILY MEMBER SELECTOR BAR -->
-<div class="bg-white border-b border-slate-200 px-4 py-2 sticky top-[57px] z-20 shadow-2xs">
+<div class="bg-white border-b border-slate-200 px-4 py-2 sticky top-[57px] z-20 shadow-2xs hidden">
     <div class="max-w-md mx-auto flex items-center gap-2 overflow-x-auto hide-scrollbar" id="familySelectorBar"></div>
 </div>
 
@@ -130,7 +131,7 @@
 
     <section id="viewFood" class="space-y-4 hidden pb-4">
       <div class="flex items-center gap-2"><button onclick="openManager('home')" class="rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs font-bold"><i class="fa-solid fa-arrow-left mr-1"></i> Home</button><h2 class="font-black text-base text-slate-900">Family Food Manager</h2></div>
-      <div class="grid grid-cols-3 gap-2"><button onclick="switchFoodPage('add')" id="foodPageAddBtn" class="rounded-xl bg-brand-600 text-white py-3 px-1 text-[11px] font-extrabold">Add food</button><button onclick="switchFoodPage('stock')" id="foodPageStockBtn" class="rounded-xl bg-slate-100 text-slate-600 py-3 px-1 text-[11px] font-extrabold">Stock & meals</button><button onclick="switchFoodPage('shopping')" id="foodPageShoppingBtn" class="rounded-xl bg-slate-100 text-slate-600 py-3 px-1 text-[11px] font-extrabold">Shopping list</button></div>
+      
       <div id="foodPageAdd" class="space-y-4"><div class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200 space-y-4">
         <div class="flex items-center justify-between"><h3 class="font-black text-slate-900 text-sm">Add food items</h3><button onclick="addFoodItem()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-extrabold">+ Manual</button></div>
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2"><label for="foodTextToAI" class="block text-xs font-extrabold text-slate-800">Type a list for AI to organise</label><textarea id="foodTextToAI" rows="3" class="w-full border border-slate-200 rounded-xl p-3 text-sm bg-white" placeholder="e.g. 2 tins tomatoes, half a bag of rice, 1 litre milk"></textarea><button onclick="addFoodFromTextAI()" class="w-full rounded-xl bg-purple-600 text-white py-3 text-xs font-extrabold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Organise with AI</button></div>
@@ -142,6 +143,8 @@
       <div class="bg-white rounded-3xl p-4 border border-slate-200 space-y-3"><h3 class="font-black text-slate-900 text-sm">Meal suggestions</h3><button onclick="suggestMeals()" class="w-full rounded-xl bg-purple-600 text-white py-3 text-xs font-extrabold"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Suggest lunches & dinners</button><div class="grid grid-cols-2 gap-2"><button onclick="setMealMode('stock')" id="mealModeStock" class="rounded-xl bg-slate-900 text-white p-2 text-[11px] font-bold">Use stock only</button><button onclick="setMealMode('budget')" id="mealModeBudget" class="rounded-xl bg-slate-100 text-slate-600 p-2 text-[11px] font-bold">Allow cheap extras</button></div><div id="mealSuggestions" class="space-y-3"></div></div></div>
       <div id="foodPageShopping" class="space-y-4 hidden"><div class="bg-white rounded-3xl p-4 border border-slate-200 space-y-3"><h3 class="font-black text-slate-900 text-sm">Shared shopping list</h3><div class="flex gap-2"><input id="shoppingNewItem" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2 text-xs" placeholder="Add item"><button onclick="addShoppingItem()" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">Add</button></div><div id="shoppingListItems" class="space-y-2"></div></div></div>
     </section>
+
+    <nav id="foodBottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-3 py-2"><div class="max-w-md mx-auto grid grid-cols-3 gap-2 text-center"><button onclick="switchFoodPage(\'add\')" id="foodPageAddBtn" class="rounded-xl py-2 text-xs font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-circle-plus text-base"></i>Add food</button><button onclick="switchFoodPage(\'stock\')" id="foodPageStockBtn" class="rounded-xl py-2 text-xs font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-boxes-stacked text-base"></i>Stock & meals</button><button onclick="switchFoodPage(\'shopping\')" id="foodPageShoppingBtn" class="rounded-xl py-2 text-xs font-extrabold flex flex-col items-center gap-1"><i class="fa-solid fa-cart-shopping text-base"></i>Shopping list</button></div></nav>
 
     <!-- VIEW 2: FRUIT & VEG TRACKER -->
     <section id="viewFruitVeg" class="space-y-4 hidden">
@@ -998,8 +1001,8 @@
     }
 
     let activeManager='home', activeFoodPage='add';
-    window.openManager=function(manager){activeManager=manager;['viewHome','viewToday','viewFruitVeg','viewWeight','viewFamily','viewFood'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.getElementById('dietBottomNav')?.classList.toggle('hidden',manager!=='diet');document.getElementById('familySelectorBar')?.parentElement?.classList.toggle('hidden',manager==='home');if(manager==='home'){document.getElementById('viewHome')?.classList.remove('hidden');return;}if(manager==='food'){document.getElementById('viewFood')?.classList.remove('hidden');switchFoodPage(activeFoodPage);renderFoodManager();return;}switchTab('today');};
-    window.switchFoodPage=function(page){activeFoodPage=page;['add','stock','shopping'].forEach(p=>{document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1))?.classList.toggle('hidden',p!==page);const b=document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1)+'Btn');if(b)b.className='rounded-xl '+(p===page?'bg-brand-600 text-white':'bg-slate-100 text-slate-600')+' py-3 px-1 text-[11px] font-extrabold';});};
+    window.openManager=function(manager){activeManager=manager;['viewHome','viewToday','viewFruitVeg','viewWeight','viewFamily','viewFood'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));document.getElementById('dietBottomNav')?.classList.toggle('hidden',manager!=='diet');document.getElementById('foodBottomNav')?.classList.toggle('hidden',manager!=='food');document.getElementById('familySelectorBar')?.parentElement?.classList.toggle('hidden',manager!=='diet');if(manager==='home'){document.getElementById('viewHome')?.classList.remove('hidden');return;}if(manager==='food'){document.getElementById('viewFood')?.classList.remove('hidden');switchFoodPage(activeFoodPage);renderFoodManager();return;}switchTab('today');};
+    window.switchFoodPage=function(page){activeFoodPage=page;['add','stock','shopping'].forEach(p=>{document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1))?.classList.toggle('hidden',p!==page);const b=document.getElementById('foodPage'+p[0].toUpperCase()+p.slice(1)+'Btn');if(b)b.className='rounded-xl py-2 text-xs font-extrabold flex flex-col items-center gap-1 '+(p===page?'text-brand-700':'text-slate-400');});};
     window.switchTab=function(tab){const tabIds={today:'Today',fruitveg:'FruitVeg',weight:'Weight',family:'Family'};const selected=tabIds[tab];if(!selected)return;['viewHome','viewFood'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));['Today','FruitVeg','Weight','Family'].forEach(t=>{document.getElementById('view'+t)?.classList.add('hidden');const b=document.getElementById('tab'+t);if(b)b.className='py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]';});const top=document.getElementById('tabFamilyTop');if(top)top.className='flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-2 text-slate-700 text-xs font-extrabold';const view=document.getElementById('view'+selected);if(!view)return;view.classList.remove('hidden');const b=document.getElementById('tab'+selected);if(b)b.className='py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';if(tab==='family'&&top)top.className='flex items-center gap-1.5 rounded-xl bg-brand-50 px-2.5 py-2 text-brand-700 text-xs font-extrabold';if(tab==='fruitveg')renderFruitVegTab();if(tab==='weight')renderWeightTab();if(tab==='family')renderProfilesList();};
 
 
