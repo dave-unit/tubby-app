@@ -184,7 +184,7 @@
                     <h2 class="font-black text-slate-900 text-base">👨‍👩‍👧‍👦 Family Members</h2>
                     <p class="text-xs text-slate-500" id="familyIdDisplay">Family ID: Loading...</p>
                 </div>
-                <button id="addPersonBtn" onclick="openProfileEditModal(null)" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Add Person</button>
+                <button id="addPersonBtn" onclick="openProfileEditModal(null, isAdminLoggedIn)" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Add Person</button>
             </div>
             <div id="profilesList" class="space-y-2.5"></div>
         </div>
@@ -538,7 +538,8 @@
             <div id="adminPendingList" class="space-y-2 max-h-40 overflow-y-auto"></div>
 
             <label class="block text-[11px] font-black uppercase text-slate-500 pt-2">System Management</label>
-            <button onclick="openProfileEditModal(null, true)" class="w-full py-2 bg-slate-100 text-slate-700 font-extrabold text-xs rounded-xl text-left px-3">+ Add New Global Profile</button>
+            <button onclick="openProfileEditModal(null, true)" class="w-full py-2 bg-slate-100 text-slate-700 font-extrabold text-xs rounded-xl text-left px-3">+ Add Family Profile</button>
+            <p class="text-[10px] text-slate-500">Profiles belong to this family. To add another login, have the person sign up with this Family ID, then approve them above.</p>
             <label class="block text-[11px] font-black uppercase text-slate-500 pt-2">Manage Profiles</label>
             <div id="adminProfilesList" class="space-y-2 max-h-48 overflow-y-auto"></div>
         </div>
@@ -715,6 +716,9 @@
         unsubs.push(onSnapshot(entryRef, (snapshot) => {
             entries = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             refreshActiveView();
+            if (document.getElementById('viewFruitVeg') && !document.getElementById('viewFruitVeg').classList.contains('hidden')) {
+                renderFruitVegTab();
+            }
         }));
 
         // Listen to Weight Logs
@@ -1038,6 +1042,14 @@
     // FRUIT / VEG CALCULATOR
     function renderFruitVegTab() {
         const member = profiles.find(p => p.id === activeMemberId) || profiles[0];
+        if (!member) {
+            document.getElementById('weeklyFruitVegTotalNum').textContent = '0.0 Servings';
+            document.getElementById('weeklyTargetStatusBadge').textContent = 'Target: 35 / week';
+            document.getElementById('weeklyFruitVegProgressBar').style.width = '0%';
+            document.getElementById('monSunGrid').innerHTML = '<div class="col-span-7 text-xs text-slate-500 py-3">No family profiles loaded yet. Please wait for profiles to load or ask the family admin to add one.</div>';
+            document.getElementById('fruitVegAiRecText').textContent = 'Log a meal and enter its fruit/vegetable servings to start tracking.';
+            return;
+        }
         const now = new Date();
         const dayOfWeek = now.getDay();
         const diffToMon = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
@@ -1351,7 +1363,7 @@
                             <div class="text-[10px] text-slate-400 font-bold">Age ${age} (${age < 18 ? 'Child' : 'Adult'}) • ${p.goal}</div>
                         </div>
                     </div>
-                    ${canEditProfile(p) ? `<button onclick="openProfileEditModal('${p.id}')" class="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600">Edit</button>` : ''}
+                    ${(isAdminLoggedIn || canEditProfile(p)) ? `<button onclick="openProfileEditModal('${p.id}', ${isAdminLoggedIn ? 'true' : 'false'})" class="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600">Edit</button>` : ''}
                 </div>`;
         });
     }
@@ -1388,8 +1400,8 @@
             showToast(isAdminLoggedIn ? "Please edit profiles from the Admin Console." : "Only adults can edit their own profile. Child profiles can only be edited by an admin.");
             return;
         }
-        if (!id && (!isAdminLoggedIn || !fromAdminScreen)) {
-            showToast("Only an admin can add profiles from the Admin Console.");
+        if (!id && !isAdminLoggedIn) {
+            showToast("Only a family admin can add a profile.");
             return;
         }
         adminProfileEditMode = fromAdminScreen === true;
