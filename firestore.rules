@@ -109,6 +109,11 @@ service cloud.firestore {
         allow read, write: if belongsToFamily(familyId);
       }
 
+      match /nutritionMemory/{itemId} {
+        // Family-shared manually corrected nutrition values improve future scans.
+        allow read, create, update, delete: if belongsToFamily(familyId);
+      }
+
       match /weights/{weightId} {
         allow read, write: if belongsToFamily(familyId);
       }
