@@ -1214,28 +1214,90 @@
     window.triggerPhotoSnap = function() { document.getElementById('cameraFileInput').click(); }
     window.triggerFileUpload = function() { document.getElementById('galleryFileInput').click(); }
     
-    window.handleImageCaptured = function(input) {
+    // Compress images before putting them in a Firestore document. Phone photos can
+    // otherwise exceed Firestore's document-size limit when stored as base64.
+    function compressImageFile(file, options = {}) {
+        const maxDimension = options.maxDimension || 1280;
+        const maxBytes = options.maxBytes || 450 * 1024;
+        const initialQuality = options.quality || 0.78;
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error("Could not read the selected image."));
+            reader.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error("This image format could not be opened. Please try a JPG or PNG image."));
+                img.onload = async () => {
+                    try {
+                        const scale = Math.min(1, maxDimension / Math.max(img.naturalWidth, img.naturalHeight));
+                        let width = Math.max(1, Math.round(img.naturalWidth * scale));
+                        let height = Math.max(1, Math.round(img.naturalHeight * scale));
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) throw new Error("Image processing is not available in this browser.");
+
+                        // Reduce quality first, then dimensions if the image is still too large.
+                        let quality = initialQuality;
+                        let blob = null;
+                        for (let dimensionAttempt = 0; dimensionAttempt < 5; dimensionAttempt++) {
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.clearRect(0, 0, width, height);
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            for (const q of [quality, 0.68, 0.58, 0.48]) {
+                                blob = await new Promise((res, rej) => {
+                                    canvas.toBlob(result => result ? res(result) : rej(new Error("Could not compress this image.")), 'image/jpeg', q);
+                                });
+                                if (blob.size <= maxBytes) break;
+                            }
+                            if (blob && blob.size <= maxBytes) break;
+                            width = Math.max(1, Math.round(width * 0.75));
+                            height = Math.max(1, Math.round(height * 0.75));
+                        }
+
+                        if (!blob || blob.size > maxBytes) {
+                            throw new Error("This image is still too large after compression. Please try a smaller image.");
+                        }
+                        const compressedReader = new FileReader();
+                        compressedReader.onerror = () => reject(new Error("Could not prepare the compressed image."));
+                        compressedReader.onload = () => resolve(compressedReader.result);
+                        compressedReader.readAsDataURL(blob);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.handleImageCaptured = async function(input) {
         if (!input.files || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentPhotoBase64 = e.target.result;
+        const file = input.files[0];
+        input.value = '';
+        try {
+            currentPhotoBase64 = await compressImageFile(file, { maxDimension: 1280, maxBytes: 450 * 1024, quality: 0.78 });
             openNewEntryModal();
             setPhotoPreview(currentPhotoBase64);
             runGeminiVisionScan(currentPhotoBase64);
-        };
-        reader.readAsDataURL(input.files[0]);
-        input.value = '';
+        } catch (err) {
+            showToast(err.message || "Could not prepare this image. Please try another photo.");
+        }
     }
 
-    window.handleAvatarCaptured = function(input) {
+    window.handleAvatarCaptured = async function(input) {
         if (!input.files || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentAvatarBase64 = e.target.result;
+        const file = input.files[0];
+        input.value = '';
+        try {
+            currentAvatarBase64 = await compressImageFile(file, { maxDimension: 400, maxBytes: 120 * 1024, quality: 0.76 });
             document.getElementById('profAvatarBase64').value = currentAvatarBase64;
             document.getElementById('profAvatarPreview').innerHTML = `<img src="${currentAvatarBase64}" class="w-full h-full object-cover">`;
-        };
-        reader.readAsDataURL(input.files[0]);
+        } catch (err) {
+            showToast(err.message || "Could not prepare this profile picture. Please try another image.");
+        }
     }
 
     window.openNewEntryModal = function() {
