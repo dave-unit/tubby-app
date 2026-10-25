@@ -76,7 +76,7 @@
                     </div>
                     <p id="dashSubtext" class="text-xs text-slate-400 mt-0.5">Goal: Healthy Eating</p>
                 </div>
-                <button onclick="openProfileEditModal(activeMemberId, isAdminLoggedIn)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold text-white transition-all backdrop-blur-sm border border-white/10">Edit</button>
+                <button onclick="openActiveProfileEditModal()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold text-white transition-all backdrop-blur-sm border border-white/10">Edit</button>
             </div>
 
             <div id="dashMacroSection" class="mt-5 space-y-3 pt-4 border-t border-white/10 relative z-10">
@@ -925,16 +925,42 @@
     }
 
     // TABS & UI ROUTING
+    // Inline HTML handlers run outside this module's scope, so expose a safe wrapper.
+    window.openActiveProfileEditModal = function() {
+        if (!activeMemberId) {
+            showToast("Please select a family profile first.");
+            return;
+        }
+        openProfileEditModal(activeMemberId, isAdminLoggedIn);
+    }
+
     window.switchTab = function(tab) {
+        const tabIds = {
+            today: 'Today',
+            fruitveg: 'FruitVeg',
+            weight: 'Weight',
+            family: 'Family'
+        };
+        const selected = tabIds[tab];
+        if (!selected) return;
+
         ['Today', 'FruitVeg', 'Weight', 'Family'].forEach(t => {
             const sec = document.getElementById('view' + t);
             const btn = document.getElementById('tab' + t);
             if (sec) sec.classList.add('hidden');
             if (btn) btn.className = 'py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]';
         });
-        document.getElementById('view' + (tab.charAt(0).toUpperCase() + tab.slice(1))).classList.remove('hidden');
-        document.getElementById('tab' + (tab.charAt(0).toUpperCase() + tab.slice(1))).className = 'py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';
-        
+
+        const selectedView = document.getElementById('view' + selected);
+        const selectedButton = document.getElementById('tab' + selected);
+        if (!selectedView || !selectedButton) {
+            console.error('Tubby navigation target is missing:', selected);
+            showToast("This section is temporarily unavailable. Please refresh Tubby.");
+            return;
+        }
+        selectedView.classList.remove('hidden');
+        selectedButton.className = 'py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]';
+
         if (tab === 'fruitveg') renderFruitVegTab();
         if (tab === 'weight') renderWeightTab();
         if (tab === 'family') renderProfilesList();
