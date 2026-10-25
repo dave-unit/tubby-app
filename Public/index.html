@@ -1541,6 +1541,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     }
 
     window.openEditEntryModal = function(id) {
+        window.tubbyNutritionManuallyEdited = false;
         const item = entries.find(e => e.id === id);
         if (!item) return;
 
