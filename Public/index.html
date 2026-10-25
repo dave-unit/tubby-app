@@ -320,6 +320,10 @@
             <div class="text-slate-600" id="aiStatusBody"></div>
         </div>
 
+        <div id="nutritionBreakdown" class="hidden rounded-2xl border border-purple-200 bg-purple-50/60 p-3 space-y-2">
+            <div class="flex items-start justify-between gap-2"><div><h4 class="text-xs font-black text-purple-950">Meal breakdown</h4><p class="text-[10px] text-purple-800">Review each component. Edit portions or nutrition values to recalculate the meal total.</p></div><button type="button" onclick="addNutritionComponent()" class="shrink-0 rounded-lg bg-white border border-purple-200 px-2 py-1 text-[10px] font-bold text-purple-900">+ Add item</button></div>
+            <div id="nutritionBreakdownRows" class="space-y-2"></div><div class="flex justify-between border-t border-purple-200 pt-2 text-xs font-black text-purple-950"><span>Breakdown total</span><span id="nutritionBreakdownTotal">0 kcal</span></div>
+        </div>
         <div id="aiPreviewCard" class="hidden bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs text-emerald-900 font-medium">
             <i class="fa-solid fa-wand-magic-sparkles text-emerald-600 mr-1"></i>
             <span id="aiDetectedTitleText">AI Detected Food / Label</span>
@@ -1251,6 +1255,45 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         document.getElementById(id)?.addEventListener('input', () => { window.tubbyNutritionManuallyEdited = true; });
     });
 
+    window.tubbyNutritionComponents = [];
+    window.renderNutritionBreakdown = function() {
+        const box=document.getElementById('nutritionBreakdown'), rows=document.getElementById('nutritionBreakdownRows');
+        if(!box||!rows)return; rows.replaceChildren();
+        if(!Array.isArray(window.tubbyNutritionComponents)||!window.tubbyNutritionComponents.length){box.classList.add('hidden');return;}
+        box.classList.remove('hidden');
+        window.tubbyNutritionComponents.forEach((item,index)=>{
+            const row=document.createElement('div');row.className='rounded-xl border border-purple-100 bg-white p-2 space-y-1.5';
+            const top=document.createElement('div');top.className='flex gap-1.5 items-center';
+            const name=document.createElement('input');name.value=item.name||'';name.placeholder='Food item';name.className='min-w-0 flex-1 px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold';name.setAttribute('aria-label','Component name');name.addEventListener('input',()=>{item.name=name.value;});
+            const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.className='w-7 h-7 rounded-lg bg-rose-50 text-rose-700 font-black';remove.title='Remove item';remove.onclick=()=>{window.tubbyNutritionComponents.splice(index,1);window.renderNutritionBreakdown();window.recalculateNutritionFromComponents(false);};
+            top.append(name,remove);
+            const portion=document.createElement('input');portion.value=item.portion||'';portion.placeholder='Portion / amount';portion.className='w-full px-2 py-1.5 border border-slate-200 rounded-lg text-[11px]';portion.setAttribute('aria-label','Estimated portion');portion.addEventListener('input',()=>{item.portion=portion.value;});
+            const fields=document.createElement('div');fields.className='grid grid-cols-3 gap-1.5';
+            [['calories','kcal'],['protein','Protein g'],['carbs','Carbs g'],['fat','Fat g'],['fibre','Fibre g'],['salt','Salt g'],['fruitVegServings','Fruit/veg']];
+            [['calories','kcal',1],['protein','Protein g',0.1],['carbs','Carbs g',0.1],['fat','Fat g',0.1],['fibre','Fibre g',0.1],['salt','Salt g',0.01],['fruitVegServings','Fruit/veg',0.1]].forEach(([key,label,step])=>{
+                const wrap=document.createElement('label');wrap.className='text-[9px] font-bold text-slate-500';wrap.textContent=label;
+                const input=document.createElement('input');input.type='number';input.min='0';input.step=String(step);input.value=Number(item[key]||0);input.className='w-full px-1.5 py-1 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800';input.setAttribute('aria-label',label);
+                input.addEventListener('input',()=>{item[key]=Math.max(0,Number(input.value||0));window.recalculateNutritionFromComponents(false);});
+                wrap.append(input);fields.append(wrap);
+            });
+            row.append(top,portion,fields);rows.append(row);
+        });
+        window.recalculateNutritionFromComponents(false);
+    };
+    window.recalculateNutritionFromComponents = function() {
+        const totals={calories:0,protein:0,carbs:0,fat:0,fibre:0,salt:0,fruitVeg:0};
+        (window.tubbyNutritionComponents||[]).forEach(c=>{['calories','protein','carbs','fat','fibre','salt'].forEach(k=>totals[k]+=Number(c[k]||0));totals.fruitVeg+=Number(c.fruitVegServings||0);});
+        const totalEl=document.getElementById('nutritionBreakdownTotal');if(totalEl)totalEl.textContent=Math.round(totals.calories)+' kcal';
+        if(!window.tubbyNutritionComponents?.length)return;
+        window.tubbyBaseMacros=totals;
+        const fields={calories:'entryCalories',protein:'entryProtein',carbs:'entryCarbs',fat:'entryFat',fibre:'entryFibre',salt:'entrySalt',fruitVeg:'entryFruitVeg'};
+        Object.entries(fields).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=Math.round(totals[k]*10)/10;});
+        window.tubbyNutritionManuallyEdited=true;applyPortionToMacros();
+    };
+    window.addNutritionComponent = function() {
+        window.tubbyNutritionComponents.push({name:'Additional item',portion:'',calories:0,protein:0,carbs:0,fat:0,fibre:0,salt:0,fruitVegServings:0});window.renderNutritionBreakdown();
+    };
+
     // GEMINI FOOD ESTIMATION: accepts a photo, written notes, or both.
     window.estimateNutritionFromDetails = async function() {
         const notes = document.getElementById('entryNotes').value.trim();
@@ -1301,7 +1344,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 window.tubbyKnownNutritionForPrompt = ranked.map(m => JSON.stringify({title:m.title,calories:m.calories,protein:m.protein,carbs:m.carbs,fat:m.fat,fibre:m.fibre||0,salt:m.salt||0,fruitVegServings:m.fruitVeg||0,notes:m.notes||""})).join("\\n");
             }
         } catch(memoryErr) { console.warn("Could not load saved nutrition memory",memoryErr); }
-        const promptText = `Estimate nutrition for the full portion of food shown and/or described. Treat every named component as food that must be counted, including sides, sauces, cooking fats, extras and dessert. Do not give a low estimate simply because exact weights are missing. For a descriptive meal, estimate each component separately using realistic portions for the described size, then sum calories and macros as a cross-check before returning the total. Use the portion cues carefully: "large", "extra", "double", "generous" or similar must increase the relevant portion estimate. For a large UK roast dinner, account separately for roast potatoes (including roasting fat), beef and any extra beef, creamed cabbage, cauliflower cheese, peas, carrots, broccoli, gravy if mentioned or typical for the meal, and dessert if mentioned. Cream, cheese, oil/butter, fatty meat cuts and roast potatoes are energy-dense and must not be treated like plain vegetables. Do not omit any item named in the description. As a rough plausibility check, a large multi-component roast dinner plus a cookie dessert would normally be well over 750 kcal; if your component estimates sum to a surprisingly low total, re-evaluate portion sizes and missed ingredients before answering. Do not force an exact target or invent precision: choose a reasonable central estimate for a realistic portion. If quantities are missing, state assumptions implicitly through the estimate rather than assuming tiny portions. Return strictly a raw JSON object with no markdown, using numeric values for calories, protein, carbs, fat, fibre, salt and fruitVegServings. Use this schema: {"title":"Food or meal name including brand/product when visible","category":"Breakfast|Lunch|Dinner|Snack","calories":400,"protein":25,"carbs":35,"fat":12,"fibre":4,"salt":0.3,"fruitVegServings":1.5}. PRIORITY: first compare the photo/notes with the previously saved family food items below. If this is the same product, use its saved manually corrected nutrition values exactly (unless the pictured label clearly shows a different serving size); do not replace them with general estimates. If no saved match exists and a nutrition label is visible, transcribe the label values for its stated serving size accurately and prefer label data over estimates. Only estimate when no reliable label or saved match exists. Estimate the whole described/shown portion before the app applies the selected eaten amount. Previously saved family items: ${window.tubbyKnownNutritionForPrompt || "None yet."}. Notes: ${notes || "No additional notes provided."}`;
+        const promptText = `Estimate nutrition for the full portion of food shown and/or described. Treat every named component as food that must be counted, including sides, sauces, cooking fats, extras and dessert. Do not give a low estimate simply because exact weights are missing. For a descriptive meal, estimate each component separately using realistic portions for the described size, then sum calories and macros as a cross-check before returning the total. Use the portion cues carefully: "large", "extra", "double", "generous" or similar must increase the relevant portion estimate. For a large UK roast dinner, account separately for roast potatoes (including roasting fat), beef and any extra beef, creamed cabbage, cauliflower cheese, peas, carrots, broccoli, gravy if mentioned or typical for the meal, and dessert if mentioned. Cream, cheese, oil/butter, fatty meat cuts and roast potatoes are energy-dense and must not be treated like plain vegetables. Do not omit any item named in the description. As a rough plausibility check, a large multi-component roast dinner plus a cookie dessert would normally be well over 750 kcal; if your component estimates sum to a surprisingly low total, re-evaluate portion sizes and missed ingredients before answering. Do not force an exact target or invent precision: choose a reasonable central estimate for a realistic portion. If quantities are missing, state assumptions implicitly through the estimate rather than assuming tiny portions. Return strictly a raw JSON object with no markdown. Include a components array with one entry for every distinct food item, side, sauce or dessert mentioned: {"name":"component name","portion":"estimated amount, e.g. 200 g or 1 medium cookie","calories":300,"protein":20,"carbs":30,"fat":12,"fibre":3,"salt":0.4,"fruitVegServings":0.5}. Each component must have numeric calories, protein, carbs, fat, fibre, salt and fruitVegServings. Sum component values to produce the meal totals in this schema: {"title":"Food or meal name including brand/product when visible","category":"Breakfast|Lunch|Dinner|Snack","components":[{"name":"...","portion":"...","calories":300,"protein":20,"carbs":30,"fat":12,"fibre":3,"salt":0.4,"fruitVegServings":0.5}],"calories":400,"protein":25,"carbs":35,"fat":12,"fibre":4,"salt":0.3,"fruitVegServings":1.5}. Total values must equal the sum of component values (rounding is fine). PRIORITY: first compare the photo/notes with the previously saved family food items below. If this is the same product, use its saved manually corrected nutrition values exactly (unless the pictured label clearly shows a different serving size); do not replace them with general estimates. If no saved match exists and a nutrition label is visible, transcribe the label values for its stated serving size accurately and prefer label data over estimates. Only estimate when no reliable label or saved match exists. Estimate the whole described/shown portion before the app applies the selected eaten amount. Previously saved family items: ${window.tubbyKnownNutritionForPrompt || "None yet."}. Notes: ${notes || "No additional notes provided."}`;
         const parts = [{ text: promptText }];
         if (base64Image) {
             const cleanBase64 = base64Image.split(',')[1] || base64Image;
@@ -1340,6 +1383,9 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                     fruitVeg: Number(parsedJson.fruitVegServings || 0)
                 };
                 applyPortionToMacros();
+                window.tubbyNutritionComponents = Array.isArray(parsedJson.components) ? parsedJson.components.map(c=>({name:String(c.name||'Food item'),portion:String(c.portion||''),calories:Number(c.calories||0),protein:Number(c.protein||0),carbs:Number(c.carbs||0),fat:Number(c.fat||0),fibre:Number(c.fibre||0),salt:Number(c.salt||0),fruitVegServings:Number(c.fruitVegServings||0)})) : [];
+                if(window.tubbyNutritionComponents.length) window.renderNutritionBreakdown(); else document.getElementById('nutritionBreakdown')?.classList.add('hidden');
+
 
                 statusBox.className = "rounded-2xl p-3 text-xs border bg-emerald-50 border-emerald-200 text-emerald-900 space-y-1";
                 statusHeader.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> AI Scan Complete`;
