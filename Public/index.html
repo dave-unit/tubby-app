@@ -996,6 +996,12 @@
         document.getElementById('dashFatText').textContent = `${fat} / ${member.fatTarget || 65}g`;
 
         renderTodayMealList(todayEntries, member);
+
+        // Keep the currently visible profile-specific tab in sync when the family selector changes.
+        const fruitVegView = document.getElementById('viewFruitVeg');
+        if (fruitVegView && !fruitVegView.classList.contains('hidden')) renderFruitVegTab();
+        const weightView = document.getElementById('viewWeight');
+        if (weightView && !weightView.classList.contains('hidden')) renderWeightTab();
     }
 
     function renderTodayMealList(mealList, member) {
