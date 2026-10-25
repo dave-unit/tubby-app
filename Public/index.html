@@ -1030,6 +1030,7 @@
 
 
 
+    let activeFoodFilter = 'all';
     function foodApiKey() { return familyGeminiApiKey || ''; }
     function foodDateStatus(item) {
       const date=item.useBy||item.bestBefore||''; if(!date) return {label:'Date not recorded',cls:'bg-slate-100 text-slate-600',review:true};
