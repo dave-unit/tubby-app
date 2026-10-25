@@ -123,6 +123,11 @@ service cloud.firestore {
         allow read, create, update, delete: if belongsToFamily(familyId);
       }
 
+      match /shoppingArchives/{archiveId} {
+        // Completed shopping trips are archived for the family.
+        allow read, create, update, delete: if belongsToFamily(familyId);
+      }
+
       match /pendingUsers/{userId} {
         allow read: if isFamilyAdmin(familyId)
           || (signedIn() && request.auth.uid == userId);
