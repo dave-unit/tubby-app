@@ -1046,6 +1046,33 @@
         });
     }
 
+    // Keep AI estimates as the full-portion baseline so changing the portion
+    // never repeatedly halves already-adjusted values.
+    window.tubbyBaseMacros = null;
+
+    function applyPortionToMacros() {
+        if (!window.tubbyBaseMacros) return;
+        let portion = 'All';
+        document.getElementsByName('portion').forEach(r => { if (r.checked) portion = r.value; });
+        const factors = { All: 1, Half: 0.5, Tasted: 0.1, Refused: 0 };
+        const factor = factors[portion] ?? 1;
+        const fields = {
+            calories: 'entryCalories',
+            protein: 'entryProtein',
+            carbs: 'entryCarbs',
+            fat: 'entryFat',
+            fruitVeg: 'entryFruitVeg'
+        };
+        Object.entries(fields).forEach(([key, id]) => {
+            const value = Number(window.tubbyBaseMacros[key] || 0) * factor;
+            document.getElementById(id).value = Math.round(value * 10) / 10;
+        });
+    }
+
+    document.getElementsByName('portion').forEach(r => {
+        r.addEventListener('change', applyPortionToMacros);
+    });
+
     // GEMINI AI VISION SCAN
     window.runGeminiVisionScan = async function(base64Image) {
         const apiKey = localStorage.getItem('tubby_gemini_key');
@@ -1092,11 +1119,17 @@
                 
                 if (parsedJson.title) document.getElementById('entryTitle').value = parsedJson.title;
                 if (parsedJson.category) document.getElementById('entryCategory').value = parsedJson.category;
-                if (parsedJson.calories !== undefined) document.getElementById('entryCalories').value = parsedJson.calories;
-                if (parsedJson.protein !== undefined) document.getElementById('entryProtein').value = parsedJson.protein;
-                if (parsedJson.carbs !== undefined) document.getElementById('entryCarbs').value = parsedJson.carbs;
-                if (parsedJson.fat !== undefined) document.getElementById('entryFat').value = parsedJson.fat;
-                if (parsedJson.fruitVegServings !== undefined) document.getElementById('entryFruitVeg').value = parsedJson.fruitVegServings;
+
+                // Keep the AI's full-serving estimate as the baseline, then update displayed
+                // values whenever the user changes the amount eaten.
+                window.tubbyBaseMacros = {
+                    calories: Number(parsedJson.calories || 0),
+                    protein: Number(parsedJson.protein || 0),
+                    carbs: Number(parsedJson.carbs || 0),
+                    fat: Number(parsedJson.fat || 0),
+                    fruitVeg: Number(parsedJson.fruitVegServings || 0)
+                };
+                applyPortionToMacros();
 
                 statusBox.className = "rounded-2xl p-3 text-xs border bg-emerald-50 border-emerald-200 text-emerald-900 space-y-1";
                 statusHeader.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> AI Scan Complete`;
@@ -1301,6 +1334,7 @@
     }
 
     window.openNewEntryModal = function() {
+        window.tubbyBaseMacros = null;
         document.getElementById('entryId').value = '';
         document.getElementById('entryModalTitle').textContent = "Log Food / Nutrition Label";
         document.getElementById('entryForm').reset();
