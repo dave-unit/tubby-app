@@ -36,7 +36,7 @@
 <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-xs">
     <div class="max-w-md mx-auto flex items-center justify-between">
         <div class="flex items-center gap-2">
-            <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-sm font-black text-lg">🥑</div>
+            <button type="button" onclick="openManager('home')" aria-label="Go to home" title="Home" class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-sm font-black text-lg active:scale-95">🥑</button>
             <div>
                 <h1 class="font-extrabold text-base leading-none text-slate-900">Tubby</h1>
                 <p class="text-[10px] text-slate-400 font-semibold mt-0.5" id="headerFamilyLabel">Family: Loading...</p>
@@ -130,7 +130,7 @@
     </section>
 
     <section id="viewFood" class="space-y-4 hidden pb-4">
-      <div class="flex items-center gap-2"><button onclick="openManager('home')" class="rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs font-bold"><i class="fa-solid fa-arrow-left mr-1"></i> Home</button><h2 class="font-black text-base text-slate-900">Family Food Manager</h2></div>
+      <div class="flex items-center gap-2"><h2 class="font-black text-base text-slate-900">Family Food Manager</h2></div>
       
       <div id="foodPageAdd" class="space-y-4"><div class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200 space-y-4">
         <div class="flex items-center justify-between"><h3 class="font-black text-slate-900 text-sm">Add food items</h3><button onclick="addFoodItem()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-extrabold">+ Manual</button></div>
@@ -385,6 +385,8 @@
                         <label class="text-[10px] font-bold text-slate-500">Fat (g)</label>
                         <input type="number" step="0.1" id="entryFat" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
                     </div>
+                    <div><label class="text-[10px] font-bold text-slate-500">Fibre (g)</label><input type="number" step="0.1" id="entryFibre" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"></div>
+                    <div><label class="text-[10px] font-bold text-slate-500">Salt (g)</label><input type="number" step="0.01" id="entrySalt" placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold"></div>
                 </div>
             </div>
 
@@ -1201,6 +1203,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
             protein: 'entryProtein',
             carbs: 'entryCarbs',
             fat: 'entryFat',
+            fibre: 'entryFibre',
+            salt: 'entrySalt',
             fruitVeg: 'entryFruitVeg'
         };
         Object.entries(fields).forEach(([key, id]) => {
