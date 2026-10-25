@@ -122,6 +122,39 @@
         <div id="todayMealList" class="space-y-3"></div>
     </section>
 
+    <!-- VIEW: SHARED FAMILY FOOD STOCK -->
+    <section id="viewFood" class="space-y-4 hidden pb-3">
+        <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h2 class="font-black text-slate-900 text-base">🧊 Family Food Stock</h2>
+                    <p class="text-xs text-slate-500 mt-1">Shared fridge, freezer and pantry. Estimates stay editable.</p>
+                </div>
+                <button onclick="addFoodItem()" class="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-extrabold whitespace-nowrap">+ Add food</button>
+            </div>
+            <div class="rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                <strong>Keep stock trustworthy.</strong> AI scans can misread products, amounts and dates. Check flagged details, and update stock when you use something.
+            </div>
+            <div id="foodManagerStatus" class="text-xs text-slate-500">Loading shared stock…</div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="setFoodFilter('all')" id="foodFilterAll" class="rounded-xl bg-slate-900 text-white py-2 text-xs font-bold">All</button>
+                <button onclick="setFoodFilter('Fridge')" id="foodFilterFridge" class="rounded-xl bg-slate-100 text-slate-600 py-2 text-xs font-bold">Fridge</button>
+                <button onclick="setFoodFilter('Freezer')" id="foodFilterFreezer" class="rounded-xl bg-slate-100 text-slate-600 py-2 text-xs font-bold">Freezer</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="setFoodFilter('Pantry')" id="foodFilterPantry" class="rounded-xl bg-slate-100 text-slate-600 py-2 text-xs font-bold">Pantry</button>
+                <button onclick="setFoodFilter('needsReview')" id="foodFilterReview" class="rounded-xl bg-amber-100 text-amber-900 py-2 text-xs font-bold">Needs checking</button>
+            </div>
+            <div id="foodInventoryList" class="space-y-2"></div>
+            <div class="border-t border-slate-100 pt-3">
+                <h3 class="font-black text-sm text-slate-800">Shopping list</h3>
+                <p class="text-xs text-slate-500 mt-1">Shared list is coming next; for now, add low-stock items to your notes.</p>
+                <textarea id="foodShoppingNotes" rows="2" class="w-full mt-2 border border-slate-200 rounded-xl p-3 text-xs" placeholder="Items to buy…"></textarea>
+                <button onclick="saveShoppingNotes()" class="mt-2 px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold">Save shopping notes</button>
+            </div>
+        </div>
+    </section>
+
     <!-- VIEW 2: FRUIT & VEG TRACKER -->
     <section id="viewFruitVeg" class="space-y-4 hidden">
         <div class="bg-white rounded-3xl p-5 shadow-xs border border-slate-200/80 space-y-4">
@@ -186,7 +219,7 @@
 
 <!-- MOBILE BOTTOM NAVIGATION TAB BAR -->
 <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 px-2 py-1">
-    <div class="max-w-md mx-auto grid grid-cols-5 gap-1 text-center">
+    <div class="max-w-md mx-auto grid grid-cols-6 gap-1 text-center">
         <button onclick="switchTab('today')" id="tabToday" class="py-2 text-brand-600 flex flex-col items-center gap-1 font-extrabold text-[10px]">
             <i class="fa-solid fa-house text-base"></i> Today
         </button>
@@ -201,6 +234,9 @@
         </button>
         <button onclick="switchTab('weight')" id="tabWeight" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
             <i class="fa-solid fa-weight-scale text-base"></i> Weight
+        </button>
+        <button onclick="switchTab('food')" id="tabFood" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
+            <i class="fa-solid fa-box-open text-base"></i> Food
         </button>
         <button onclick="switchTab('family')" id="tabFamily" class="py-2 text-slate-400 flex flex-col items-center gap-1 font-bold text-[10px]">
             <i class="fa-solid fa-users text-base"></i> Family
@@ -686,6 +722,7 @@
     let entries = [];
     let weightLogs = [];
     let pendingUsers = [];
+    let foodInventory = [];
 
     let unsubs = [];
 
@@ -772,6 +809,18 @@
             familyGeminiApiKey = snapshot.exists() ? (snapshot.data().geminiApiKey || '') : '';
         }, (err) => {
             console.error("Family settings listener failed:", err);
+        }));
+
+        // Shared food inventory: isolated in its own family subcollection.
+        const inventoryRef = collection(db, "families", familyId, "foodInventory");
+        unsubs.push(onSnapshot(inventoryRef, (snapshot) => {
+            foodInventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (document.getElementById('viewFood') && !document.getElementById('viewFood').classList.contains('hidden')) renderFoodManager();
+        }, (err) => {
+            console.error("Food inventory listener failed:", err);
+            if (document.getElementById('viewFood') && !document.getElementById('viewFood').classList.contains('hidden')) {
+                document.getElementById('foodManagerStatus').textContent = "Stock could not be loaded. Check family access or Firestore permissions, then retry.";
+            }
         }));
 
         // Listen to Profiles
@@ -955,12 +1004,13 @@
             today: 'Today',
             fruitveg: 'FruitVeg',
             weight: 'Weight',
-            family: 'Family'
+            family: 'Family',
+            food: 'Food'
         };
         const selected = tabIds[tab];
         if (!selected) return;
 
-        ['Today', 'FruitVeg', 'Weight', 'Family'].forEach(t => {
+        ['Today', 'FruitVeg', 'Weight', 'Family', 'Food'].forEach(t => {
             const sec = document.getElementById('view' + t);
             const btn = document.getElementById('tab' + t);
             if (sec) sec.classList.add('hidden');
@@ -980,7 +1030,168 @@
         if (tab === 'fruitveg') renderFruitVegTab();
         if (tab === 'weight') renderWeightTab();
         if (tab === 'family') renderProfilesList();
+        if (tab === 'food') renderFoodManager();
     }
+
+
+    let activeFoodFilter = 'all';
+
+    function foodDateStatus(item) {
+        const date = item.bestBefore || item.useBy || '';
+        if (!date) return { label: 'Date not recorded', cls: 'bg-slate-100 text-slate-600', review: true };
+        const today = new Date(); today.setHours(0,0,0,0);
+        const d = new Date(date + 'T00:00:00');
+        const days = Math.round((d - today) / 86400000);
+        if (days < 0) return { label: 'Date passed — check item', cls: 'bg-rose-100 text-rose-800', review: true };
+        if (days === 0) return { label: 'Date is today', cls: 'bg-rose-100 text-rose-800', review: true };
+        if (days <= 3) return { label: 'Date approaching (' + days + 'd)', cls: 'bg-amber-100 text-amber-900', review: true };
+        return { label: (item.dateType || 'Best-before') + ': ' + date, cls: 'bg-emerald-50 text-emerald-800', review: false };
+    }
+
+    function renderFoodManager() {
+        const list = document.getElementById('foodInventoryList');
+        const status = document.getElementById('foodManagerStatus');
+        if (!list || !status) return;
+        if (!activeFamilyId) {
+            status.textContent = 'Sign in to view shared family stock.';
+            list.innerHTML = '';
+            return;
+        }
+        const visible = foodInventory.filter(item => {
+            if (activeFoodFilter === 'needsReview') return item.needsReview || !item.bestBefore && !item.useBy || foodDateStatus(item).review;
+            if (activeFoodFilter !== 'all') return (item.storage || 'Pantry') === activeFoodFilter;
+            return true;
+        }).sort((a,b) => {
+            const ar = foodDateStatus(a).review ? 0 : 1, br = foodDateStatus(b).review ? 0 : 1;
+            return ar - br || String(a.name || '').localeCompare(String(b.name || ''));
+        });
+        status.textContent = foodInventory.length + ' item' + (foodInventory.length === 1 ? '' : 's') + ' shared with your family. AI-estimated or incomplete details are marked for checking.';
+        if (!visible.length) {
+            list.innerHTML = '<div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-center text-xs text-slate-500">' + (foodInventory.length ? 'No items in this filter.' : 'Your shared stock is empty. Add a few items manually, or use the scan workflow when available.') + '</div>';
+            return;
+        }
+        list.innerHTML = '';
+        visible.forEach(item => {
+            const date = foodDateStatus(item);
+            const review = item.needsReview || !item.quantity || !item.name || !item.bestBefore && !item.useBy;
+            const card = document.createElement('div');
+            card.className = 'border border-slate-200 rounded-2xl p-3 space-y-2';
+            const title = document.createElement('div');
+            title.className = 'flex items-start justify-between gap-2';
+            const left = document.createElement('div');
+            left.className = 'min-w-0';
+            const name = document.createElement('div');
+            name.className = 'font-extrabold text-sm text-slate-900 break-words';
+            name.textContent = item.name || 'Unnamed item';
+            const details = document.createElement('div');
+            details.className = 'text-xs text-slate-500 mt-1';
+            details.textContent = [item.quantity || 'Amount unknown', item.storage || 'Storage unknown', item.fillLevel ? item.fillLevel + ' full' : ''].filter(Boolean).join(' · ');
+            left.append(name, details);
+            const badge = document.createElement('span');
+            badge.className = 'text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap ' + (review ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-800');
+            badge.textContent = review ? 'Check details' : 'Recorded';
+            title.append(left, badge);
+            const dateBadge = document.createElement('div');
+            dateBadge.className = 'inline-block text-[10px] font-bold px-2 py-1 rounded-full ' + date.cls;
+            dateBadge.textContent = date.label;
+            const note = document.createElement('div');
+            note.className = 'text-[10px] text-slate-400';
+            note.textContent = (item.source || 'Manual entry') + (item.updatedAt ? ' · Updated ' + new Date(item.updatedAt).toLocaleDateString() : '') + (item.confirmedAt ? ' · Confirmed by family' : ' · Not yet confirmed');
+            const actions = document.createElement('div');
+            actions.className = 'flex gap-2';
+            const edit = document.createElement('button');
+            edit.className = 'flex-1 rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-700';
+            edit.textContent = 'Review / edit';
+            edit.onclick = () => editFoodItem(item.id);
+            const used = document.createElement('button');
+            used.className = 'flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-bold text-white';
+            used.textContent = 'Mark finished';
+            used.onclick = () => finishFoodItem(item.id);
+            actions.append(edit, used);
+            card.append(title, dateBadge, note, actions);
+            list.append(card);
+        });
+        const notes = document.getElementById('foodShoppingNotes');
+        if (notes && !notes.dataset.loaded) {
+            notes.value = localStorage.getItem('tubbyShoppingNotes_' + activeFamilyId) || '';
+            notes.dataset.loaded = '1';
+        }
+    }
+
+    window.setFoodFilter = function(filter) {
+        activeFoodFilter = filter;
+        const ids = {all:'foodFilterAll', Fridge:'foodFilterFridge', Freezer:'foodFilterFreezer', Pantry:'foodFilterPantry', needsReview:'foodFilterReview'};
+        Object.values(ids).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.className = 'rounded-xl bg-slate-100 text-slate-600 py-2 text-xs font-bold';
+        });
+        const selected = document.getElementById(ids[filter]);
+        if (selected) selected.className = filter === 'needsReview' ? 'rounded-xl bg-amber-300 text-amber-950 py-2 text-xs font-bold' : 'rounded-xl bg-slate-900 text-white py-2 text-xs font-bold';
+        renderFoodManager();
+    };
+
+    window.addFoodItem = async function() {
+        if (!activeFamilyId) return showToast('Sign in first to add shared stock.');
+        const name = prompt('What food or product is it?');
+        if (!name || !name.trim()) return;
+        const quantity = prompt('Amount and unit (for example: 2 tins, 500 g, half a jar). Leave blank if unsure.', '');
+        const storageChoice = prompt('Where is it stored? Enter Fridge, Freezer or Pantry.', 'Pantry');
+        const storage = ['Fridge','Freezer','Pantry'].find(v => v.toLowerCase() === String(storageChoice || '').trim().toLowerCase()) || 'Pantry';
+        const date = prompt('Best-before or use-by date (YYYY-MM-DD), or leave blank if unknown.', '');
+        const dateType = date ? (confirm('Is this a USE-BY date? Choose Cancel for best-before.') ? 'Use-by' : 'Best-before') : '';
+        try {
+            const ref = doc(collection(db, 'families', activeFamilyId, 'foodInventory'));
+            await setDoc(ref, { name: name.trim(), quantity: quantity && quantity.trim() ? quantity.trim() : '', storage, bestBefore: date && /^\\d{4}-\\d{2}-\\d{2}$/.test(date.trim()) ? date.trim() : '', useBy: dateType === 'Use-by' && /^\\d{4}-\\d{2}-\\d{2}$/.test(date.trim()) ? date.trim() : '', dateType, source: 'Manual entry', needsReview: !quantity || !date, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || '' });
+            showToast('Food added to shared stock.');
+        } catch (err) {
+            console.error(err);
+            showToast('Could not save stock. Check family Firestore permissions.');
+        }
+    };
+
+    window.editFoodItem = async function(id) {
+        const item = foodInventory.find(x => x.id === id);
+        if (!item) return;
+        const name = prompt('Food name:', item.name || '');
+        if (name === null) return;
+        const quantity = prompt('Amount / volume (for example 250 ml or about half a jar):', item.quantity || '');
+        if (quantity === null) return;
+        const storageInput = prompt('Storage: Fridge, Freezer or Pantry', item.storage || 'Pantry');
+        if (storageInput === null) return;
+        const storage = ['Fridge','Freezer','Pantry'].find(v => v.toLowerCase() === storageInput.trim().toLowerCase()) || item.storage || 'Pantry';
+        const dateInput = prompt('Best-before / use-by date YYYY-MM-DD (blank if unknown):', item.bestBefore || item.useBy || '');
+        if (dateInput === null) return;
+        const validDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(dateInput.trim());
+        const dateType = dateInput.trim() ? (confirm('Is this a USE-BY date? Choose Cancel for best-before.') ? 'Use-by' : 'Best-before') : '';
+        try {
+            await updateDoc(doc(db, 'families', activeFamilyId, 'foodInventory', id), { name: name.trim() || 'Unnamed item', quantity: quantity.trim(), storage, bestBefore: validDate && dateType === 'Best-before' ? dateInput.trim() : '', useBy: validDate && dateType === 'Use-by' ? dateInput.trim() : '', dateType, needsReview: !quantity.trim() || !validDate, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || '' });
+            showToast('Stock details updated.');
+        } catch (err) {
+            console.error(err);
+            showToast('Could not update item. Check family Firestore permissions.');
+        }
+    };
+
+    window.finishFoodItem = async function(id) {
+        const item = foodInventory.find(x => x.id === id);
+        if (!item) return;
+        if (!confirm('Mark ' + (item.name || 'this item') + ' as finished and remove it from shared stock?')) return;
+        try {
+            await deleteDoc(doc(db, 'families', activeFamilyId, 'foodInventory', id));
+            showToast('Removed from available stock.');
+        } catch (err) {
+            console.error(err);
+            showToast('Could not update stock. Check family Firestore permissions.');
+        }
+    };
+
+    window.saveShoppingNotes = function() {
+        if (!activeFamilyId) return showToast('Sign in first.');
+        const notes = document.getElementById('foodShoppingNotes');
+        if (!notes) return;
+        localStorage.setItem('tubbyShoppingNotes_' + activeFamilyId, notes.value);
+        showToast('Shopping notes saved on this device only. A shared shopping list is not connected yet.');
+    };
 
     function refreshActiveView() {
         const member = profiles.find(p => p.id === activeMemberId) || profiles[0];
