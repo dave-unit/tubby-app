@@ -981,7 +981,8 @@
 
         document.getElementById('dashMacroSection').style.display = member.trackMacros !== false ? 'block' : 'none';
 
-        const todayStr = new Date().toISOString().slice(0,10);
+        const todayNow = new Date();
+        const todayStr = `${todayNow.getFullYear()}-${String(todayNow.getMonth() + 1).padStart(2, '0')}-${String(todayNow.getDate()).padStart(2, '0')}`;
         const todayEntries = entries.filter(e => e.memberId === member.id && e.timestamp.startsWith(todayStr));
 
         let cals = 0, prot = 0, carbs = 0, fat = 0;
@@ -1235,7 +1236,7 @@
 
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('entryTime').value = now.toISOString().slice(0,16);
+        document.getElementById('entryTime').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         document.getElementById('entryMemberId').value = activeMemberId || (profiles[0]?.id || '');
         if (!currentPhotoBase64) setPhotoPreview(null);
 
