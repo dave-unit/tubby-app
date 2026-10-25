@@ -184,7 +184,7 @@
                     <h2 class="font-black text-slate-900 text-base">👨‍👩‍👧‍👦 Family Members</h2>
                     <p class="text-xs text-slate-500" id="familyIdDisplay">Family ID: Loading...</p>
                 </div>
-                <button id="addPersonBtn" onclick="openProfileEditModal(null, isAdminLoggedIn)" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Add Person</button>
+                <button id="addPersonBtn" onclick="openAddFamilyProfileModal()" class="px-3 py-1.5 bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-xs">+ Add Person</button>
             </div>
             <div id="profilesList" class="space-y-2.5"></div>
         </div>
@@ -926,6 +926,11 @@
 
     // TABS & UI ROUTING
     // Inline HTML handlers run outside this module's scope, so expose a safe wrapper.
+    window.openAddFamilyProfileModal = function() {
+        // This handler is called from HTML, so read module-scoped auth state inside the wrapper.
+        window.openProfileEditModal(null, isAdminLoggedIn);
+    }
+
     window.openActiveProfileEditModal = function() {
         if (!activeMemberId) {
             showToast("Please select a family profile first.");
