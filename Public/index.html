@@ -1141,7 +1141,7 @@
         const dateType = date ? (confirm('Is this a USE-BY date? Choose Cancel for best-before.') ? 'Use-by' : 'Best-before') : '';
         try {
             const ref = doc(collection(db, 'families', activeFamilyId, 'foodInventory'));
-            await setDoc(ref, { name: name.trim(), quantity: quantity && quantity.trim() ? quantity.trim() : '', storage, bestBefore: date && /^\\d{4}-\\d{2}-\\d{2}$/.test(date.trim()) ? date.trim() : '', useBy: dateType === 'Use-by' && /^\\d{4}-\\d{2}-\\d{2}$/.test(date.trim()) ? date.trim() : '', dateType, source: 'Manual entry', needsReview: !quantity || !date, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || '' });
+            await setDoc(ref, { name: name.trim(), quantity: quantity && quantity.trim() ? quantity.trim() : '', storage, bestBefore: date && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : '', useBy: dateType === 'Use-by' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim()) ? date.trim() : '', dateType, source: 'Manual entry', needsReview: !quantity || !date, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || '' });
             showToast('Food added to shared stock.');
         } catch (err) {
             console.error(err);
@@ -1161,7 +1161,7 @@
         const storage = ['Fridge','Freezer','Pantry'].find(v => v.toLowerCase() === storageInput.trim().toLowerCase()) || item.storage || 'Pantry';
         const dateInput = prompt('Best-before / use-by date YYYY-MM-DD (blank if unknown):', item.bestBefore || item.useBy || '');
         if (dateInput === null) return;
-        const validDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(dateInput.trim());
+        const validDate = /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim());
         const dateType = dateInput.trim() ? (confirm('Is this a USE-BY date? Choose Cancel for best-before.') ? 'Use-by' : 'Best-before') : '';
         try {
             await updateDoc(doc(db, 'families', activeFamilyId, 'foodInventory', id), { name: name.trim() || 'Unnamed item', quantity: quantity.trim(), storage, bestBefore: validDate && dateType === 'Best-before' ? dateInput.trim() : '', useBy: validDate && dateType === 'Use-by' ? dateInput.trim() : '', dateType, needsReview: !quantity.trim() || !validDate, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || '' });
