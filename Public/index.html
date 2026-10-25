@@ -1403,6 +1403,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         await window.runGeminiVisionScan(currentPhotoBase64, notes);
     }
     window.runGeminiVisionScan = async function(base64Image = null, notesOverride = null) {
+        // A newer scan invalidates every older in-flight response.
+        const requestId = window.tubbyMealAnalysisRequestId = (window.tubbyMealAnalysisRequestId || 0) + 1;
         const apiKey = familyGeminiApiKey || '';
         const statusBox = document.getElementById('aiStatusBox');
         const statusHeader = document.getElementById('aiStatusHeader');
@@ -1437,6 +1439,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
         try {
             if (activeFamilyId) {
                 const memorySnap = await getDocs(collection(db, "families", activeFamilyId, "nutritionMemory"));
+                if (requestId !== window.tubbyMealAnalysisRequestId) return;
                 const memories = memorySnap.docs.map(d => ({id:d.id,...d.data()}));
                 const searchText = (notes + " " + (document.getElementById("entryTitle").value || "")).toLowerCase();
                 const ranked = memories.map(m => { const tokens=String(m.title||"").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>2); return {...m,score:tokens.reduce((n,w)=>n+(searchText.includes(w)?1:0),0)}; }).filter(m=>m.score>0).sort((a,b)=>b.score-a.score || Number(b.updatedAt||0)-Number(a.updatedAt||0)).slice(0,8);
@@ -1458,6 +1461,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 body: JSON.stringify({ contents: [{ role: "user", parts }] })
             });
 
+            if (requestId !== window.tubbyMealAnalysisRequestId) return;
             if (!response.ok) throw new Error("HTTP Connection Failed");
 
             const resData = await response.json();
@@ -1495,6 +1499,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 throw new Error("No response returned from Gemini.");
             }
         } catch (err) {
+            if (requestId !== window.tubbyMealAnalysisRequestId) return;
             statusBox.className = "rounded-2xl p-3 text-xs border bg-rose-50 border-rose-200 text-rose-900 space-y-1";
             statusHeader.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600"></i> Scan Error`;
             statusBody.textContent = err.message;
