@@ -683,6 +683,7 @@
     let currentUserProfileId = null;
     let isAdminLoggedIn = false;
     let currentUserEmail = null;
+    let familyGeminiApiKey = '';
 
     let profiles = [];
     let entries = [];
@@ -736,6 +737,12 @@
             activeFamilyId = userData.familyId;
             currentUserProfileId = userData.profileId || null;
             isAdminLoggedIn = userData.isAdmin === true;
+
+            // Load the shared family AI key so it survives refreshes and is available
+            // to trusted family accounts on their own devices.
+            const familyDocSnap = await getDoc(doc(db, "families", activeFamilyId));
+            familyGeminiApiKey = familyDocSnap.exists() ? (familyDocSnap.data().geminiApiKey || '') : '';
+            if (familyGeminiApiKey) localStorage.setItem('tubby_gemini_key', familyGeminiApiKey);
 
             if (!currentUserProfileId && !isAdminLoggedIn) {
                 document.getElementById('authModal').classList.remove('hidden');
@@ -1075,7 +1082,7 @@
 
     // GEMINI AI VISION SCAN
     window.runGeminiVisionScan = async function(base64Image) {
-        const apiKey = localStorage.getItem('tubby_gemini_key');
+        const apiKey = familyGeminiApiKey || localStorage.getItem('tubby_gemini_key') || '';
         const statusBox = document.getElementById('aiStatusBox');
         const statusHeader = document.getElementById('aiStatusHeader');
         const statusBody = document.getElementById('aiStatusBody');
@@ -1725,7 +1732,7 @@
     }
 
     window.openAdminModal = function() {
-        document.getElementById('adminApiKeyInput').value = localStorage.getItem('tubby_gemini_key') || '';
+        document.getElementById('adminApiKeyInput').value = familyGeminiApiKey || localStorage.getItem('tubby_gemini_key') || '';
         document.getElementById('apiTestStatus').classList.add('hidden');
         renderAdminProfilesList();
         renderAdminPendingList();
@@ -1734,11 +1741,28 @@
 
     window.closeAdminModal = function() { document.getElementById('adminModal').classList.add('hidden'); }
 
-    window.saveAdminApiKey = function() {
+    window.saveAdminApiKey = async function() {
         const key = document.getElementById('adminApiKeyInput').value.trim();
-        if (key) { localStorage.setItem('tubby_gemini_key', key); showToast("API Key stored!"); }
-        else { localStorage.removeItem('tubby_gemini_key'); showToast("API Key removed"); }
-        closeAdminModal();
+        if (!activeFamilyId) {
+            showToast("Please sign in to a family before saving the API key.");
+            return;
+        }
+        try {
+            await updateDoc(doc(db, "families", activeFamilyId), {
+                geminiApiKey: key
+            });
+            familyGeminiApiKey = key;
+            if (key) {
+                localStorage.setItem('tubby_gemini_key', key);
+                showToast("API key saved for this family!");
+            } else {
+                localStorage.removeItem('tubby_gemini_key');
+                showToast("Family API key removed.");
+            }
+            closeAdminModal();
+        } catch (err) {
+            showToast("Could not save family API key: " + (err?.message || "Please try again."));
+        }
     }
 
     window.openGuideModal = function() { document.getElementById('guideModal').classList.remove('hidden'); }
