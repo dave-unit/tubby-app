@@ -224,8 +224,8 @@
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5 border border-slate-100">
         <div class="text-center space-y-1">
             <div class="w-14 h-14 bg-gradient-to-tr from-brand-600 to-emerald-400 rounded-3xl flex items-center justify-center text-2xl mx-auto shadow-md text-white">🥑</div>
-            <h2 class="text-xl font-black text-slate-900">Tubby Diet Tracker</h2>
-            <p class="text-xs text-slate-500">Firebase Cloud Family Sync</p>
+            <h2 class="text-xl font-black text-slate-900">Tubby</h2>
+            <p class="text-xs text-slate-500">The Family Friendly Diet App</p>
         </div>
         <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-2xl text-[11px] font-extrabold">
             <button type="button" id="authTabLoginBtn" onclick="switchAuthTab('login')" class="py-2 rounded-xl bg-white text-slate-800 shadow-xs cursor-pointer">Login</button>
@@ -579,7 +579,7 @@
             </div>
             <div class="space-y-1">
                 <h4 class="font-extrabold text-slate-800 text-xs">Secure Family Isolation</h4>
-                <p>All records are grouped in Firestore under `/families/{familyId}` protected by secure rules.</p>
+                <p>Your family’s information is kept private and organised within your family account.</p>
             </div>
         </div>
         <button onclick="closeGuideModal()" class="w-full py-2.5 bg-slate-900 text-white font-extrabold text-xs rounded-xl">Close</button>
@@ -686,7 +686,7 @@
         } catch (err) {
             console.error("Tubby account loading failed:", err);
             document.getElementById('authModal').classList.remove('hidden');
-            showToast("Signed in, but Tubby couldn't load your account: " + (err?.message || "Firestore error") + ". Check Firestore rules.");
+            showToast("Signed in, but Tubby couldn't load your account: " + (err?.message || "Account loading error") + ". Please try again or contact support.");
         }
     });
 
@@ -1241,7 +1241,7 @@
                 await setDoc(doc(collection(db, "families", activeFamilyId, "entries")), payload);
             }
             closeEntryModal();
-            showToast("Entry saved to Firestore!");
+            showToast("Entry saved!");
         } catch (err) {
             showToast("Error saving entry: " + err.message);
         }
@@ -1478,7 +1478,7 @@
             }
 
             closeProfileEditModal();
-            showToast("Profile saved to Firestore!");
+            showToast("Profile saved!");
         } catch (err) {
             showToast("Error saving profile: " + err.message);
         }
@@ -1519,7 +1519,7 @@
                 timestamp: new Date().toISOString()
             });
             closeAddWeightModal();
-            showToast("Weight logged to Firestore!");
+            showToast("Weight logged!");
         } catch (err) {
             showToast("Error: " + err.message);
         }
