@@ -1005,11 +1005,11 @@
         todayEntries.forEach(e => { cals += Number(e.calories||0); prot += Number(e.protein||0); carbs += Number(e.carbs||0); fat += Number(e.fat||0); });
 
         const calTarget = member.calTarget || 2000;
-        document.getElementById('dashCalText').textContent = `${cals} / ${calTarget} kcal`;
+                document.getElementById('dashCalText').textContent = `${Number(cals.toFixed(1))} / ${calTarget} kcal`;
         document.getElementById('dashCalBar').style.width = Math.min(100, Math.round((cals / calTarget) * 100)) + '%';
-        document.getElementById('dashProtText').textContent = `${prot} / ${member.proteinTarget || 120}g`;
-        document.getElementById('dashCarbText').textContent = `${carbs} / ${member.carbsTarget || 200}g`;
-        document.getElementById('dashFatText').textContent = `${fat} / ${member.fatTarget || 65}g`;
+                document.getElementById('dashProtText').textContent = `${prot.toFixed(1)} / ${member.proteinTarget || 120}g`;
+                document.getElementById('dashCarbText').textContent = `${carbs.toFixed(1)} / ${member.carbsTarget || 200}g`;
+                document.getElementById('dashFatText').textContent = `${fat.toFixed(1)} / ${member.fatTarget || 65}g`;
 
         renderTodayMealList(todayEntries, member);
 
