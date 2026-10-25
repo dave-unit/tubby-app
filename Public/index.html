@@ -1081,12 +1081,12 @@
     };
     function resolveFoodDateText(rawDate, rawText, today=new Date()) {
       const source=String(rawDate||'').trim() || String(rawText||'').trim();
-      const text=source.replace(/\\b(use\\s*by|best\\s*before|BBE|EXP|expiry|expires?)\\b/ig,' ').replace(/\\s+/g,' ').trim();
+      const text=source.replace(/\b(use\s*by|best\s*before|BBE|EXP|expiry|expires?)\b/ig,' ').replace(/\s+/g,' ').trim();
       const monthNames='jan feb mar apr may jun jul aug sep oct nov dec'.split(' ');
       let day=null,month=null,year=null,m;
-      if((m=text.match(/\\b(\\d{1,2})[\\s.\\/-]+([a-z]{3,9})(?:[\\s,./-]+(\\d{2,4}))?\\b/i))){day=+m[1];month=monthNames.findIndex(x=>x===m[2].slice(0,3).toLowerCase())+1;year=m[3]?+m[3]:null;}
-      else if((m=text.match(/\\b([a-z]{3,9})[\\s.\\/-]+(\\d{1,2})(?:[\\s,./-]+(\\d{2,4}))?\\b/i))){month=monthNames.findIndex(x=>x===m[1].slice(0,3).toLowerCase())+1;day=+m[2];year=m[3]?+m[3]:null;}
-      else if((m=text.match(/\\b(\\d{1,2})[.\\/-](\\d{1,2})(?:[.\\/-](\\d{2,4}))?\\b/))){day=+m[1];month=+m[2];year=m[3]?+m[3]:null;if(day<=12&&month<=12&&day!==month)return {date:'',inferredYear:false,ambiguous:true,raw:source};}
+      if((m=text.match(/\b(\d{1,2})[\s.\/-]+([a-z]{3,9})(?:[\s,./-]+(\d{2,4}))?\b/i))){day=+m[1];month=monthNames.findIndex(x=>x===m[2].slice(0,3).toLowerCase())+1;year=m[3]?+m[3]:null;}
+      else if((m=text.match(/\b([a-z]{3,9})[\s.\/-]+(\d{1,2})(?:[\s,./-]+(\d{2,4}))?\b/i))){month=monthNames.findIndex(x=>x===m[1].slice(0,3).toLowerCase())+1;day=+m[2];year=m[3]?+m[3]:null;}
+      else if((m=text.match(/\b(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{2,4}))?\b/))){day=+m[1];month=+m[2];year=m[3]?+m[3]:null;if(day<=12&&month<=12&&day!==month)return {date:'',inferredYear:false,ambiguous:true,raw:source};}
       if(!day||!month||month<1||month>12||day<1||day>31)return {date:'',inferredYear:false,ambiguous:false,raw:source};
       const todayStart=new Date(today.getFullYear(),today.getMonth(),today.getDate());
       let inferredYear=!year;
@@ -1110,7 +1110,7 @@
       if(!type)return {parsed,dateResult:{date:'',raw:String(parsed.rawDate||parsed.date||''),ambiguous:false,inferredYear:false},type:''};
       const rawDate=String(parsed.rawDate||'').trim();
       const dateResult=resolveFoodDateText(rawDate,parsed.date);
-      if(!dateResult.date && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(parsed.date||'')) && rawDate.match(/\\b\\d{4}\\b/))dateResult.date=parsed.date;
+      if(!dateResult.date && /^\d{4}-\d{2}-\d{2}$/.test(String(parsed.date||'')) && rawDate.match(/\b\d{4}\b/))dateResult.date=parsed.date;
       return {parsed,dateResult,type};
     }
     window.scanExistingFoodDatePhoto=async function(input){
