@@ -1575,6 +1575,25 @@
             }
             closeEntryModal();
             showToast("Entry saved!");
+            // Offer a human-confirmed stock update after a newly logged meal.
+            // Never silently subtract amounts: food names and portions may not match stock exactly.
+            if (!entryId && foodInventory.length && confirm("Would you like to check family stock for ingredients used in this meal?\n\nTubby will suggest possible matches, but you confirm each remaining amount.")) {
+                const mealText = (payload.title + " " + payload.notes).toLowerCase();
+                const candidates = foodInventory.filter(x => x.name && (mealText.includes(x.name.toLowerCase()) || x.name.toLowerCase().split(/\\s+/).some(w => w.length > 3 && mealText.includes(w))));
+                if (!candidates.length) showToast("No clear stock matches. You can update the Food tab manually.");
+                for (const item of candidates.slice(0, 8)) {
+                    if (!confirm("Possible stock match: " + item.name + "\\nRecorded amount: " + (item.quantity || "unknown") + "\\nUpdate this item?")) continue;
+                    const remaining = prompt("Enter NEW remaining amount for " + item.name + ", or type FINISHED:", item.quantity || "");
+                    if (remaining === null) continue;
+                    try {
+                        if (remaining.trim().toLowerCase() === "finished" || remaining.trim() === "0") {
+                            if (confirm("Remove " + item.name + " from available stock?")) await deleteDoc(doc(db, "families", activeFamilyId, "foodInventory", item.id));
+                        } else if (remaining.trim()) {
+                            await updateDoc(doc(db, "families", activeFamilyId, "foodInventory", item.id), { quantity: remaining.trim(), needsReview: false, confirmedAt: Date.now(), updatedAt: Date.now(), updatedBy: currentUserEmail || "" });
+                        }
+                    } catch (stockErr) { console.error(stockErr); showToast("Meal saved, but stock update failed. Check Firestore permissions."); }
+                }
+            }
         } catch (err) {
             showToast("Error saving entry: " + err.message);
         }
