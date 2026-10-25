@@ -13,3 +13,10 @@ Tick items as you shop. Tap **Finish shop & archive ticked items** to archive ch
 
 ## Notes
 AI suggestions and list organisation require the family Gemini API key to be configured in Admin Settings. Check AI-generated item names, quantities, and date details before relying on them.
+
+## Diet scans and nutrition memory
+When logging food, review AI nutrition estimates and correct them against the package label where possible. If you manually edit any nutrient value and save the entry, Tubby saves the corrected values in the family's nutrition memory. Future scans load those saved corrections before asking AI, so matching products can reuse the family's values. Nutrition memory is shared across family members. A clear product name/brand in the title or notes helps future matching. The avocado icon in the top-left returns to the main home screen.
+
+The diet entry form now measures **fibre (g)** and **salt (g)** as well as calories, protein, carbohydrates and fat. Today's fibre and salt totals appear on the dashboard. For packaged foods, use the label's per-serving values and double-check the serving size, particularly when logging food for children.
+
+**Deployment note:** nutrition memory requires the `nutritionMemory` Firestore rule in `firestore.rules` as well as the updated `Public/index.html`. Deploy both to Firebase for cross-device memory to work.
