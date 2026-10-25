@@ -588,6 +588,17 @@
             </div>
             <div id="apiTestStatus" class="text-[11px] font-bold hidden p-2 rounded-xl mt-1"></div>
         </div>
+        <div class="space-y-2 pt-3 border-t border-slate-100">
+            <label for="familyDateLocaleInput" class="block text-[11px] font-black uppercase text-slate-500">Family Country & Date Format</label>
+            <p class="text-[10px] text-slate-500">Used when AI reads food dates and when Tubby interprets numeric dates. Applies to everyone in this family.</p>
+            <select id="familyDateLocaleInput" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800">
+                <option value="en-GB">United Kingdom — day/month/year (e.g. 05/11/2027)</option>
+                <option value="en-US">United States — month/day/year (e.g. 11/05/2027)</option>
+                <option value="en-001">International — day/month/year (ISO dates preferred)</option>
+            </select>
+            <button onclick="saveFamilyDateLocale()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-xs">Save Family Date Format</button>
+            <div id="familyDateLocaleStatus" class="text-[11px] font-bold hidden"></div>
+        </div>
         <div class="space-y-2 pt-2 border-t border-slate-100">
             <label class="block text-[11px] font-black uppercase text-slate-500">Pending Registrations</label>
             <p class="text-[10px] text-slate-500">Approve new signups and assign them to family profiles.</p>
@@ -734,6 +745,7 @@
     let isAdminLoggedIn = false;
     let currentUserEmail = null;
     let familyGeminiApiKey = '';
+    let familyDateLocale = 'en-GB';
 
     let profiles = [];
     let entries = [];
@@ -827,7 +839,11 @@
         // Keep the shared family API key in sync across already-open family devices.
         const familyDocRef = doc(db, "families", familyId);
         unsubs.push(onSnapshot(familyDocRef, (snapshot) => {
-            familyGeminiApiKey = snapshot.exists() ? (snapshot.data().geminiApiKey || '') : '';
+            const familyData = snapshot.exists() ? snapshot.data() : {};
+            familyGeminiApiKey = familyData.geminiApiKey || '';
+            familyDateLocale = ['en-GB','en-US','en-001'].includes(familyData.dateLocale) ? familyData.dateLocale : 'en-GB';
+            const localeInput = document.getElementById('familyDateLocaleInput');
+            if (localeInput && document.getElementById('adminModal') && document.getElementById('adminModal').classList.contains('hidden')) localeInput.value = familyDateLocale;
         }, (err) => {
             console.error("Family settings listener failed:", err);
         }));
@@ -962,7 +978,8 @@
                     transaction.set(famRef, {
                         familyId,
                         createdBy: uid,
-                        createdAt: now
+                        createdAt: now,
+                        dateLocale: 'en-GB'
                     });
                     transaction.set(userRef, {
                         email, familyId, name, isAdmin: true,
@@ -2152,6 +2169,8 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
 
     window.openAdminModal = function() {
         document.getElementById('adminApiKeyInput').value = familyGeminiApiKey || '';
+        document.getElementById('familyDateLocaleInput').value = familyDateLocale || 'en-GB';
+        document.getElementById('familyDateLocaleStatus').classList.add('hidden');
         document.getElementById('apiTestStatus').classList.add('hidden');
         renderAdminProfilesList();
         renderAdminPendingList();
@@ -2159,6 +2178,32 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     }
 
     window.closeAdminModal = function() { document.getElementById('adminModal').classList.add('hidden'); }
+
+    window.saveFamilyDateLocale = async function() {
+        if (!activeFamilyId) return showToast('Please sign in to a family before changing its date format.');
+        if (!isAdminLoggedIn) return showToast('Only the family admin can change family date settings.');
+        const locale = document.getElementById('familyDateLocaleInput').value;
+        if (!['en-GB','en-US','en-001'].includes(locale)) return showToast('Choose a supported date format.');
+        const status = document.getElementById('familyDateLocaleStatus');
+        status.className = 'text-[11px] font-bold text-slate-600';
+        status.textContent = 'Saving family date format…';
+        status.classList.remove('hidden');
+        try {
+            const familyRef = doc(db, 'families', activeFamilyId);
+            await setDoc(familyRef, { dateLocale: locale, updatedAt: Date.now() }, { merge: true });
+            const saved = await getDoc(familyRef);
+            if (!saved.exists() || saved.data().dateLocale !== locale) throw new Error('The saved date format could not be verified.');
+            familyDateLocale = locale;
+            status.className = 'text-[11px] font-bold text-emerald-700';
+            status.textContent = 'Saved. Food-date scans will now use this family format.';
+            showToast('Family date format saved.');
+        } catch (err) {
+            console.error('Family date format save failed:', err);
+            status.className = 'text-[11px] font-bold text-rose-700';
+            status.textContent = 'Could not save date format: ' + (err?.message || 'Please try again.');
+            showToast('Could not save family date format.');
+        }
+    }
 
     window.saveAdminApiKey = async function() {
         const key = document.getElementById('adminApiKeyInput').value.trim();
