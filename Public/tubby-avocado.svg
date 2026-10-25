@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+<title id="title">Tubby avocado</title>
+<defs>
+ <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#17491b"/><stop offset=".45" stop-color="#286d20"/><stop offset="1" stop-color="#123e18"/></linearGradient>
+ <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ebc3e"/><stop offset=".55" stop-color="#4d982a"/><stop offset="1" stop-color="#36761f"/></linearGradient>
+ <radialGradient id="flesh" cx=".38" cy=".28" r=".86"><stop offset="0" stop-color="#e7efb1"/><stop offset=".7" stop-color="#d6e49a"/><stop offset="1" stop-color="#c6d980"/></radialGradient>
+ <radialGradient id="pit" cx=".32" cy=".24" r=".85"><stop offset="0" stop-color="#a66c3c"/><stop offset=".45" stop-color="#80502d"/><stop offset="1" stop-color="#59371f"/></radialGradient>
+ <radialGradient id="pitshine" cx=".3" cy=".2" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>
+<path d="M128 8 C91 8 72 34 62 69 C54 98 42 116 28 136 C13 158 8 181 17 202 C30 232 72 247 128 248 C184 247 226 232 239 202 C248 181 243 158 228 136 C214 116 202 98 194 69 C184 34 165 8 128 8Z" fill="url(#skin)"/>
+<path d="M128 14 C94 14 77 39 68 72 C60 101 48 119 34 139 C20 160 15 181 24 200 C37 226 76 240 128 241 C180 240 219 226 232 200 C241 181 236 160 222 139 C208 119 196 101 188 72 C179 39 162 14 128 14Z" fill="url(#rim)"/>
+<path d="M128 23 C98 23 84 45 76 76 C68 105 56 124 43 143 C30 162 26 181 34 197 C46 220 82 232 128 233 C174 232 210 220 222 197 C230 181 226 162 213 143 C200 124 188 105 180 76 C172 45 158 23 128 23Z" fill="url(#flesh)"/>
+<ellipse cx="128" cy="148" rx="45" ry="46" fill="#64743c" opacity=".18" transform="translate(0 3)"/>
+<circle cx="128" cy="145" r="44" fill="url(#pit)"/>
+<circle cx="128" cy="145" r="44" fill="url(#pitshine)"/>
+</svg>
