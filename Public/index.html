@@ -399,8 +399,12 @@
             </div>
 
             <div>
-                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Notes</label>
-                <textarea id="entryNotes" rows="2" placeholder="Details..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"></textarea>
+                <label class="block text-[11px] font-black uppercase text-slate-500 mb-1">Notes / Food Description</label>
+                <textarea id="entryNotes" rows="2" placeholder="Describe the food, ingredients, portion size, sauces, drinks, etc." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"></textarea>
+                <button type="button" onclick="estimateNutritionFromDetails()" class="w-full mt-2 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-extrabold text-xs rounded-xl">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Estimate Nutrition from Photo / Notes
+                </button>
+                <p class="text-[10px] text-slate-500 mt-1">Add a photo, describe what you ate, or use both. AI values are estimates—check them before saving.</p>
             </div>
 
             <div class="flex gap-2 pt-2">
@@ -1080,13 +1084,24 @@
         r.addEventListener('change', applyPortionToMacros);
     });
 
-    // GEMINI AI VISION SCAN
-    window.runGeminiVisionScan = async function(base64Image) {
+    // GEMINI FOOD ESTIMATION: accepts a photo, written notes, or both.
+    window.estimateNutritionFromDetails = async function() {
+        const notes = document.getElementById('entryNotes').value.trim();
+        if (!currentPhotoBase64 && !notes) {
+            showToast("Add a food photo or describe what you ate first.");
+            return;
+        }
+        await window.runGeminiVisionScan(currentPhotoBase64, notes);
+    }
+    window.runGeminiVisionScan = async function(base64Image = null, notesOverride = null) {
         const apiKey = familyGeminiApiKey || localStorage.getItem('tubby_gemini_key') || '';
         const statusBox = document.getElementById('aiStatusBox');
         const statusHeader = document.getElementById('aiStatusHeader');
         const statusBody = document.getElementById('aiStatusBody');
         const previewCard = document.getElementById('aiPreviewCard');
+        const notes = notesOverride === null
+            ? document.getElementById('entryNotes').value.trim()
+            : String(notesOverride || '').trim();
 
         statusBox.classList.remove('hidden');
         previewCard.classList.add('hidden');
@@ -1098,21 +1113,30 @@
             return;
         }
 
+        if (!base64Image && !notes) {
+            statusBox.className = "rounded-2xl p-3 text-xs border bg-amber-50 border-amber-200 text-amber-900 space-y-1";
+            statusHeader.textContent = "Food details needed";
+            statusBody.textContent = "Add a photo or write a description in Notes.";
+            return;
+        }
+
         statusBox.className = "rounded-2xl p-3 text-xs border bg-blue-50 border-blue-200 text-blue-900 space-y-1 animate-pulse";
         statusHeader.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-600"></i> Requesting Gemini AI...`;
-        statusBody.textContent = "Analyzing food photo, packaging or nutrition label...";
+        statusBody.textContent = "Estimating nutrition from " + (base64Image && notes ? "your photo and notes..." : base64Image ? "your photo..." : "your description...");
 
-        const cleanBase64 = base64Image.split(',')[1] || base64Image;
-        const promptText = `Analyze this image. Return strictly a raw JSON string (no markdown ticks): {"title":"Food or product name", "category":"Breakfast|Lunch|Dinner|Snack", "calories":400, "protein":25, "carbs":35, "fat":12, "fruitVegServings":1.5}`;
+        const promptText = `Estimate the nutrition for the food or meal shown in the image and/or described in the notes. Treat the notes as important context about ingredients, cooking method, sauces, drinks, and portion size. If a quantity is not specified, make a reasonable typical-portion estimate. Return strictly a raw JSON object with no markdown, using numeric values for calories, protein, carbs, fat and fruitVegServings. Use this schema: {"title":"Food or meal name","category":"Breakfast|Lunch|Dinner|Snack","calories":400,"protein":25,"carbs":35,"fat":12,"fruitVegServings":1.5}. Estimate the whole described/shown portion before the app applies the selected eaten amount. If the image is a nutrition label, use the visible label values and serving size where possible. Notes: ${notes || "No additional notes provided."}`;
+        const parts = [{ text: promptText }];
+        if (base64Image) {
+            const cleanBase64 = base64Image.split(',')[1] || base64Image;
+            parts.push({ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } });
+        }
 
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(apiKey)}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ role: "user", parts: [ { text: promptText }, { inlineData: { mimeType: "image/jpeg", data: cleanBase64 } } ] }]
-                })
+                body: JSON.stringify({ contents: [{ role: "user", parts }] })
             });
 
             if (!response.ok) throw new Error("HTTP Connection Failed");
