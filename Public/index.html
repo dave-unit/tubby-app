@@ -110,9 +110,10 @@
                         <div id="dashFatText" class="text-xs font-black text-purple-400 mt-0.5">0 / 65g</div>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 pt-2 text-center">
+                <div class="grid grid-cols-3 gap-2 pt-2 text-center">
                     <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Fibre</div><div id="dashFibreText" class="text-xs font-black text-amber-300 mt-0.5">0g today</div></div>
                     <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Salt</div><div id="dashSaltText" class="text-xs font-black text-rose-300 mt-0.5">0g today</div></div>
+                    <div class="bg-white/5 rounded-2xl p-2 border border-white/5"><div class="text-[10px] text-slate-400 font-bold">Fruit/Veg</div><div id="dashFruitVegWeekText" class="text-xs font-black text-emerald-300 mt-0.5">0 / 35 this week</div></div>
                 </div>
             </div>
         </div>
@@ -297,7 +298,7 @@
 <!-- MODAL 2: LOG / EDIT FOOD ENTRY -->
 <div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
             <h3 class="font-extrabold text-slate-900 text-base" id="entryModalTitle">Log Food Entry</h3>
             <button onclick="closeEntryModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -442,7 +443,7 @@
 <!-- MODAL 3: PROFILE ADD / EDIT -->
 <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden">
     <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto hide-scrollbar space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
             <h3 class="font-extrabold text-slate-900 text-base" id="profileModalTitle">Profile Setup</h3>
             <button onclick="closeProfileEditModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -599,7 +600,7 @@
 <!-- MODAL 6: USER GUIDE -->
 <div id="guideModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto hide-scrollbar">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="sticky top-0 z-20 bg-white flex items-center justify-between border-b border-slate-100 pb-3 pt-1 -mx-5 px-5">
             <h3 id="guideTitle" class="font-extrabold text-slate-900 text-base flex items-center gap-2"><i class="fa-solid fa-book-open text-brand-600"></i><span> Diet Manager Guide</span></h3>
             <button onclick="closeGuideModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs" aria-label="Close user guide"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -1147,6 +1148,16 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
                 document.getElementById('dashFatText').textContent = `${fat.toFixed(1)} / ${member.fatTarget || 65}g`;
                 document.getElementById('dashFibreText').textContent = `${fibre.toFixed(1)}g today`;
                 document.getElementById('dashSaltText').textContent = `${salt.toFixed(2)}g today`;
+                const nowForFruitVeg = new Date();
+                const mondayForFruitVeg = new Date(nowForFruitVeg);
+                mondayForFruitVeg.setDate(nowForFruitVeg.getDate() + (nowForFruitVeg.getDay() === 0 ? -6 : 1 - nowForFruitVeg.getDay()));
+                mondayForFruitVeg.setHours(0,0,0,0);
+                const sundayForFruitVeg = new Date(mondayForFruitVeg);
+                sundayForFruitVeg.setDate(mondayForFruitVeg.getDate() + 6);
+                sundayForFruitVeg.setHours(23,59,59,999);
+                const fruitVegWeekTotal = entries.reduce((total, e) => { const d = new Date(e.timestamp); return total + (e.memberId === member.id && d >= mondayForFruitVeg && d <= sundayForFruitVeg ? Number(e.fruitVeg || 0) : 0); }, 0);
+                const fruitVegWeekTarget = getAgeFromDob(member.dob) < 18 ? 21 : 35;
+                document.getElementById('dashFruitVegWeekText').textContent = `${fruitVegWeekTotal.toFixed(1)} / ${fruitVegWeekTarget} this week`;
 
         renderTodayMealList(todayEntries, member);
 
@@ -2015,7 +2026,7 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
     <div id="foodItemModal" class="hidden fixed inset-0 z-[100] items-end sm:items-center justify-center bg-slate-950/50 p-3" role="dialog" aria-modal="true" aria-labelledby="foodItemModalTitle">
       <div class="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-3xl p-5 space-y-4 shadow-xl">
         <div class="flex items-center justify-between"><h3 id="foodItemModalTitle" class="font-black text-lg">Add food to stock</h3><button type="button" onclick="closeFoodItemModal()" class="rounded-full bg-slate-100 px-3 py-2 text-sm">✕</button></div>
-        <p class="text-xs text-slate-500">Type the details below, or choose a photo option to scan food packaging.</p><div class="grid grid-cols-2 gap-2"><button type="button" onclick="closeFoodItemModal();document.getElementById('foodScanInput').click()" class="rounded-xl bg-brand-600 text-white p-3 text-xs font-extrabold">📷 Take / upload food photos</button><button type="button" onclick="closeFoodItemModal();document.getElementById('receiptScanInput').click()" class="rounded-xl bg-indigo-600 text-white p-3 text-xs font-extrabold">🧾 Upload / photograph receipt</button></div>
+        <p class="text-xs text-slate-500">Type the details below, or choose a photo option to scan food packaging.</p><div class="grid grid-cols-2 gap-2"><button type="button" onclick="closeFoodItemModal();document.getElementById('foodScanInput').click()" class="rounded-xl bg-brand-600 text-white px-4 py-3 text-xs font-extrabold">Photo stock</button><button type="button" onclick="closeFoodItemModal();document.getElementById('receiptScanInput').click()" class="rounded-xl bg-indigo-600 text-white px-4 py-3 text-xs font-extrabold">Scan receipt</button></div>
         <form onsubmit="saveFoodItemForm(event)" class="space-y-3">
           <div id="foodItemNameWrap"><label class="block text-xs font-bold mb-1" for="foodItemName">Food / product name</label><input id="foodItemName" class="w-full border border-slate-200 rounded-xl p-3 text-sm" placeholder="e.g. Greek yoghurt" required></div>
           <div><label id="foodItemAmountLabel" class="block text-xs font-bold mb-1" for="foodItemAmount">Remaining amount / volume</label><input id="foodItemAmount" class="w-full border border-slate-200 rounded-xl p-3 text-sm" placeholder="e.g. 2 tins, 250 ml, half a jar"></div>
