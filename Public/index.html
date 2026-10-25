@@ -1644,8 +1644,21 @@ window.addDepletedToShopping=function(){(async()=>{try{const items=window.deplet
             } else {
                 await setDoc(doc(collection(db, "families", activeFamilyId, "entries")), payload);
             }
+            // Remember the final nutrition the user sees (including manual corrections).
+            const memoryTitle = String(payload.title || "").trim();
+            if (memoryTitle && activeFamilyId) {
+                const factor = ({All:1,Half:0.5,Tasted:0.1,Refused:0})[payload.portion] ?? 1;
+                const corrected = key => factor > 0 ? Number(payload[key] || 0) / factor : Number((payload.baseMacros || {})[key] || 0);
+                const normName = v => String(v||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+                const memoryRef = collection(db, "families", activeFamilyId, "nutritionMemory");
+                const existingMemory = await getDocs(memoryRef);
+                const wanted = normName(memoryTitle);
+                const matched = existingMemory.docs.find(d => normName(d.data().title) === wanted);
+                const memoryPayload = {title:memoryTitle,calories:corrected("calories"),protein:corrected("protein"),carbs:corrected("carbs"),fat:corrected("fat"),fibre:corrected("fibre"),salt:corrected("salt"),fruitVeg:corrected("fruitVeg"),notes:payload.notes||"",updatedAt:Date.now(),correctedByUser:true};
+                await setDoc(matched ? doc(db,"families",activeFamilyId,"nutritionMemory",matched.id) : doc(memoryRef), memoryPayload, {merge:true});
+            }
             closeEntryModal();
-            showToast("Entry saved!");
+            showToast("Entry saved and nutrition remembered!");
             // Stock deduction is optional and handled in an in-app review panel.
             if (!entryId && document.getElementById('deductStockAfterMeal')?.checked && foodInventory.length) {
                 const mealText=(payload.title+' '+payload.notes).toLowerCase();
