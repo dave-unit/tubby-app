@@ -128,6 +128,13 @@ service cloud.firestore {
         allow read, create, update, delete: if belongsToFamily(familyId);
       }
 
+      match /stockTransactions/{transactionId} {
+        // Family members can view and record stock changes for auditability.
+        allow read, create: if belongsToFamily(familyId);
+        // History records are immutable from the client to preserve the audit trail.
+        allow update, delete: if false;
+      }
+
       match /shoppingArchives/{archiveId} {
         // Completed shopping trips are archived for the family.
         allow read, create, update, delete: if belongsToFamily(familyId);
